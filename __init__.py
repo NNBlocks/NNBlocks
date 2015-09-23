@@ -1,5 +1,5 @@
 from NN.model import Model
-from NN.rnn import RecursiveNeuralNetwork
+from NN.rntn import RecursiveNeuralTensorNetwork
 from NN.softmax import SoftmaxLayer
 from NN.composite import CompositeModel
 
