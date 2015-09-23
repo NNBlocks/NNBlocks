@@ -1,6 +1,7 @@
 import theano.tensor as T
 import theano
 import numpy as np
+import NN
 import NN.cost
 from NN.train import Trainer
 
@@ -140,7 +141,7 @@ class AdagradTrainer(Trainer):
         if not supports_batch:
             grads = [[] for param in model.params]
             for inp, outp in zip(inputs, expected_outputs):
-                a = inp + [outp]
+                a = list(inp) + [outp]
                 grads_i = self.__get_grads(*a)
                 for g, gi in zip(grads, grads_i):
                     g.append(gi)

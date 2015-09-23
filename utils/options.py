@@ -57,7 +57,7 @@ class Options(object):
 
         Note:
             If an option with the specified name doesn't exist yet, then one is
-            created without any optional arguments.
+            created without any optional settings. A warning will be issued.
             To add an option, the add method is preferable.
 
         Args:
@@ -68,6 +68,11 @@ class Options(object):
 
         """
         if name not in self.__ops:
+            import warnings
+            message = "Trying to set an nonexistent option {0}. The option " + \
+                        "will be added."
+            message = message.format(name)
+            warnings.warn(message, RuntimeWarning, stacklevel=2)
             self.add(name, value)
             return
 
