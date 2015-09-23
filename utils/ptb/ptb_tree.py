@@ -13,11 +13,11 @@ class PTBTreeNode:
             0 - The sentence. This is a list of string tokens.
             1 - The comp tree of the sentence
             2 - The label of the sentence. This a list of integers 
-                representing the class of each node in the tree, including the
+                representing the label of each node in the tree, including the
                 leafs
         """
         if isinstance(self.value,str):
-            return ([self.value], [], [int(self.label)])
+            return ([self.value], [], [self.label])
 
         lch = self.value[0].get_features()
         rch = self.value[1].get_features()
@@ -59,7 +59,7 @@ class PTBTreeNode:
 
         return (lch[0] + rch[0], 
                 thiscomptree , 
-                leafs_labels + internal_labels + [int(self.label)])
+                leafs_labels + internal_labels + [self.label])
                 
 
     def penn_print(self, tabs=0):
@@ -70,4 +70,11 @@ class PTBTreeNode:
             for child in self.value:
                 child.penn_print(tabs+1)
             print ("\t"*tabs) + ")"
+            
+    def plain(self):
+        while not isinstance(self.value,str) and len(self.value) == 1:
+            self.value = self.value[0].value
+        if not isinstance(self.value, str):
+            for v in self.value:
+                v.plain()
 
