@@ -44,7 +44,7 @@ class PTBParser:
         if self.read_file is not None:
             self.read_file.close()
 
-    def parse(self, new_tree=True, string=None):
+    def parse(self, string=None, new_tree=True):
         if new_tree and self.read_file is not None:
             line = self.read_file.readline()
             self.t.set_line(line)

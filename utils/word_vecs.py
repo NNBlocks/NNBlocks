@@ -1,4 +1,5 @@
 import numpy as np
+import theano
 
 def is_number(s):
     try:
@@ -12,8 +13,7 @@ def is_year(s):
     return s.isdigit() and 1800 <= int(s) <= 2030
 
 class WordVecsHelper:
-    def __init__(self, dim, lower=True):
-        self.dim = dim
+    def __init__(self, lower=True):
         self.word_vecs = None
         self.word2index = None
         self.counter = {}
@@ -31,7 +31,7 @@ class WordVecsHelper:
                     self.counter[token] = 0
                 self.counter[token] += 1
 
-    def create(self, rng=np.random.RandomState(42), threshold=1):
+    def create(self, dim, rng=np.random.RandomState(412), threshold=0):
         word2index = {}
         word2index['NUMBER'] = 0
         word2index['YEAR'] = 1
@@ -54,7 +54,7 @@ class WordVecsHelper:
         word_vecs = rng.normal(
             loc=0,
             scale=1.0,
-            size=(num_words,self.dim)
+            size=(num_words, dim)
         )
         self.word_vecs = word_vecs/10
         self.word2index = word2index
@@ -68,17 +68,53 @@ class WordVecsHelper:
             s = 'YEAR'
         elif is_number(s):
             s = 'NUMBER'
-        elif s not in self.word2index:
+        if s not in self.word2index:
             s = 'UNK'
 
         return self.word2index[s]
         
     def translate(self, l):
-        if isinstance(l,str):
-            self.translate_word(l)
+        if isinstance(l, str):
+            return self.translate_word(l)
 
         r = []
         for s in l:
             r.append(self.translate_word(s))
 
         return r
+
+    def read_file(self, filename, separator='\t'):
+        line_counts = 1
+        word_dim = None
+        with open(filename) as fin:
+            line = fin.readline()
+            splits = line.split(separator)
+            word_dim = len(splits) - 1
+            for line in fin:
+                line_counts += 1
+
+
+        rng = np.random.RandomState(16927361)
+
+        #UNK
+        line_counts += 1
+        word_vecs = np.empty(
+            shape=(line_counts, word_dim),
+            dtype=theano.config.floatX
+        )
+        word_vecs[0, :] = rng.normal(loc=0., scale=1., size=(1, word_dim)) / 10
+
+        word2index = {}
+        word2index['UNK'] = 0
+        with open(filename) as fin:
+            for line in fin:
+                splits = line.split(separator)
+                token = splits[0]
+                vec = map(float, splits[1:])
+                word_vecs[len(word2index), :] = vec
+                word2index[token] = len(word2index)
+
+        self.word2index = word2index
+        self.word_vecs = word_vecs
+
+        return word_vecs, word2index
