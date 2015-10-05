@@ -1,4 +1,4 @@
-import nn.utils as utils
+import nnb.utils as utils
 
 class Trainer(object):
     options = None

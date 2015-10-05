@@ -1,7 +1,7 @@
 import theano
 import theano.tensor as T
 import numpy as np
-from nn import Model
+from nnb import Model
 
 class RecursiveNeuralTensorNetwork(Model):
 

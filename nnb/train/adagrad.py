@@ -1,9 +1,9 @@
 import theano.tensor as T
 import theano
 import numpy as np
-import nn
-import nn.cost as cost
-from nn.train import Trainer
+import nnb
+import nnb.cost as cost
+from nnb.train import Trainer
 
 class AdagradTrainer(Trainer):
     reset_history = None
@@ -15,7 +15,7 @@ class AdagradTrainer(Trainer):
             name="model",
             required=True,
             description="The model to be trained.",
-            value_type=nn.Model
+            value_type=nnb.Model
         )
         ops.add(
             name="L2_reg",

@@ -1,5 +1,5 @@
 import theano
-import nn.utils as utils
+import nnb.utils as utils
 import abc
 
 class Model(object):

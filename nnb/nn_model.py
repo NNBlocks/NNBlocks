@@ -1,4 +1,4 @@
-from nn import Model
+from nnb import Model
 import numpy as np
 import theano
 import theano.tensor as T
@@ -172,6 +172,11 @@ class SoftmaxLayer(Model):
 
 
 class RecursiveNeuralNetwork(Model):
+    """
+    A Recursive Neural Network. 
+    Each composition in the recursive layer is made with the model passed by
+    options.
+    """
 
     @staticmethod
     def get_options():
@@ -195,11 +200,7 @@ class RecursiveNeuralNetwork(Model):
         )
 
         return ops
-    """
-    A Recursive Neural Network. 
-    Each composition in the recursive layer is made with the model passed by
-    options.
-    """
+
     def init_params(self):
         options = self.options
         word_vecs = options.get('word_vecs')
@@ -208,7 +209,7 @@ class RecursiveNeuralNetwork(Model):
 
         if comp_model is None:
             comp_model = PerceptronLayer(insize=word_dim * 2, outsize=word_dim)
-            options.set('comp_model', comp_model)
+            options.set('comp_model', comp_model[0])
 
         word_vecs = theano.shared(
             value=word_vecs,
