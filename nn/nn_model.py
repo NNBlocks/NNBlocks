@@ -1,4 +1,4 @@
-from NN import Model
+from nn import Model
 import numpy as np
 import theano
 import theano.tensor as T

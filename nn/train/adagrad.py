@@ -1,9 +1,9 @@
 import theano.tensor as T
 import theano
 import numpy as np
-import NN
-import NN.cost
-from NN.train import Trainer
+import nn
+import nn.cost as cost
+from nn.train import Trainer
 
 class AdagradTrainer(Trainer):
     reset_history = None
@@ -15,7 +15,7 @@ class AdagradTrainer(Trainer):
             name="model",
             required=True,
             description="The model to be trained.",
-            value_type=NN.Model
+            value_type=nn.Model
         )
         ops.add(
             name="L2_reg",
@@ -35,7 +35,7 @@ class AdagradTrainer(Trainer):
         )
         ops.add(
             name="cost_func",
-            value=NN.cost.neg_log_likelihood,
+            value=cost.neg_log_likelihood,
             description="Cost function to be applied to the model's output " + \
                         "and expected output."
         )

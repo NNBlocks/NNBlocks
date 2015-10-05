@@ -1,4 +1,4 @@
-from NN.utils.ptb import PTBTreeNode
+from nn.utils.ptb import PTBTreeNode
 
 class PTBTokenizer:
     def __init__(self):
