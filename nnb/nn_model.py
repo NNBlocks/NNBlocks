@@ -286,7 +286,7 @@ class RecursiveNeuralNetwork(Model):
 
 class SiameseNetwork(Model):
     """A Siamese network
-    Bromley, Jane, et al. "Signature verification using a “Siamese” time delay
+    Bromley, Jane, et al. "Signature verification using a "Siamese" time delay
     neural network." International Journal of Pattern Recognition and Artificial
     Intelligence 7.04 (1993): 669-688.
     """

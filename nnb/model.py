@@ -25,7 +25,7 @@ class Model(object):
         self.params = self.init_params()
         if self.params is None or not isinstance(self.params, list):
             raise ValueError("The init_params method should return a list of " +
-                            "theano shared variables."
+                            "theano shared variables.")
         inputs = self.generate_input()
         if inputs is None or not isinstance(inputs, list):
             raise ValueError("The generate_input method should return a list " +
@@ -78,7 +78,6 @@ class Model(object):
 
     def __getitem__(self, val):
         return SliceModel(model=self, slice=val)
-
 
 class SliceModel(Model):
     @staticmethod
