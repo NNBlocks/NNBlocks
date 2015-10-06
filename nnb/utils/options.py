@@ -11,7 +11,6 @@ class Options(object):
 
     def __init__(self):
         """Initializes the Options instance with no options set
-
         """
         self.__ops = {}
 
@@ -25,18 +24,17 @@ class Options(object):
             name (str): The name of the option.
             value (Optional): The value of the option. Set it if a default
                 value is wanted. The value's type should follow the value_type
-                argument.
+                argument, but this won't be checked here or anywhere else.
             required (Optional[bool]): Sets if this option is required. This
                 constraint will be checked in the check method. Default is False
             readonly (Optional[bool]): Sets if this option is read-only. If
                 True, every attempt to modify it with the set method will raise
                 an AttributeError.
             value_type (Optional[type|Iterable[type]]): If set to a type, the
-                option's value will be checked (at the check method) with the
-                isintance function. If set to an iterable of types, the
-                isinstance function will be used for all types specified and the
-                check will succeed if any of the isinstance function calls
-                returns True.
+                option's value will be checked with the isintance function. If
+                set to an iterable of types, the isinstance function will be
+                used for all types specified and the check will succeed if any
+                of the isinstance function calls returns True.
             description (Optional[str]): String containing a small description
                 of what this option does.
 
@@ -63,16 +61,16 @@ class Options(object):
         Args:
             name (str): The name of the option to be set.
             value: The value of the option. This value should follow the
-                specified type(s), or else the check method will fail. To see
-                the specified type(s), do options.get_all(name)['value_type'].
+                specified type(s), or else this method will fail. To see the
+                specified type(s), do options.get_all(name)['value_type'].
 
         """
         if name not in self.__ops:
             import warnings
-            message = "Trying to set an nonexistent option {0}. The option " + \
+            message = "Trying to set a nonexistent option {0}. The option " + \
                         "will be added."
             message = message.format(name)
-            warnings.warn(message, RuntimeWarning, stacklevel=2)
+            warnings.warn(message, RuntimeWarning)
             self.add(name, value)
             return
 
@@ -88,7 +86,7 @@ class Options(object):
                     checked = True
                     break
             if not checked:
-                raise ValueError("Option {0} should be one of the types:" + \
+                raise ValueError("Option {0} should be of one of the types:" + \
                                 " {1}".format(name, option['value_type']))
         else:
             if not isinstance(value, option['value_type']):

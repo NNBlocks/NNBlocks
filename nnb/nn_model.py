@@ -4,6 +4,8 @@ import theano
 import theano.tensor as T
 
 class PerceptronLayer(Model):
+    """A Perceptron layer
+    """
 
     @staticmethod
     def get_options():
@@ -54,8 +56,6 @@ class PerceptronLayer(Model):
                 ),
                 dtype=theano.config.floatX
             )
-            #TODO Take this next line out. It's only for the Socher's model
-            W += np.vstack([np.eye(insize/2), np.eye(insize/2)])
         W = theano.shared(
             value=W,
             name='W',
@@ -74,7 +74,7 @@ class PerceptronLayer(Model):
         return [W, b]
 
     def generate_input(self):
-        inp = T.vector("layer_input")
+        inp = T.matrix("layer_input")
         return [inp]
 
     def generate_output(self, inputs):
@@ -86,6 +86,8 @@ class PerceptronLayer(Model):
 
 
 class SoftmaxLayer(Model):
+    """A Softmax layer
+    """
 
     @staticmethod
     def get_options():
@@ -209,7 +211,7 @@ class RecursiveNeuralNetwork(Model):
 
         if comp_model is None:
             comp_model = PerceptronLayer(insize=word_dim * 2, outsize=word_dim)
-            options.set('comp_model', comp_model[0])
+            options.set('comp_model', comp_model)
 
         word_vecs = theano.shared(
             value=word_vecs,
@@ -238,7 +240,7 @@ class RecursiveNeuralNetwork(Model):
         #Composition function for two word_vecs
         def compose(u, v):
             stack = T.concatenate([u, v], axis=0)
-            out = comp_model.generate_output(stack)
+            out = comp_model.generate_output([stack])
             if out.ndim == 2:
                 import warnings
                 warnings.warn("The composition model's output is 2 " +
@@ -265,16 +267,16 @@ class RecursiveNeuralNetwork(Model):
 
         #Execute the scan
         h, _ = theano.scan(
-                        fn=one_step,
-                        outputs_info=partial,
-                        sequences=[
-                            comp_tree,
-                            T.arange(
-                                x.shape[0],
-                                x.shape[0] + comp_tree.shape[0]
-                            )
-                        ]
-                    )
+            fn=one_step,
+            outputs_info=partial,
+            sequences=[
+                comp_tree,
+                T.arange(
+                    x.shape[0],
+                    x.shape[0] + comp_tree.shape[0]
+                )
+            ]
+        )
 
         #Get the last iteration's values
         h = h[-1]
@@ -283,6 +285,11 @@ class RecursiveNeuralNetwork(Model):
 
 
 class SiameseNetwork(Model):
+    """A Siamese network
+    Bromley, Jane, et al. "Signature verification using a “Siamese” time delay
+    neural network." International Journal of Pattern Recognition and Artificial
+    Intelligence 7.04 (1993): 669-688.
+    """
     @staticmethod
     def get_options():
         ops = Model.get_options()
@@ -301,12 +308,127 @@ class SiameseNetwork(Model):
         return options.get('model').params
 
     def generate_input(self):
-        inputs = self.options.get('model').input
+        inputs = self.options.get('model').generate_input()
         inputs += self.options.get('model').generate_input()
         return inputs
 
     def generate_output(self, inputs):
-        out1 = self.options.get('model').output
+        out1 = self.options.get('model').generate_output(inputs[:len(inputs)/2])
         out2 = self.options.get('model').generate_output(inputs[len(inputs)/2:])
 
         return T.dot(out1, out2) / (out1.norm(2) * out2.norm(2))
+
+
+class RecurrentNeuralNetwork(Model):
+    """A simple recurrent neural network
+    """
+    @staticmethod
+    def get_options():
+        ops = Model.get_options()
+
+        ops.add(
+            name='insize',
+            value_type=int,
+            required=True,
+            description="Size of each input of the network."
+        )
+
+        ops.add(
+            name='outsize',
+            value_type=int,
+            required=True,
+            description="Size of each output of the network."
+        )
+
+        ops.add(
+            name='h0',
+            value_type=np.ndarray,
+            description="Initial 'memory' input."
+        )
+
+        ops.add(
+            name='W',
+            value_type=np.ndarray,
+            description="Weight matrix for x, the features vector."
+        )
+
+        ops.add(
+            name='b',
+            value_type=np.ndarray,
+            description="Bias vector for the transformation."
+        )
+
+        ops.add(
+            name='W_h',
+            value_type=np.ndarray,
+            description="Weight matrix for h_t-1, the memory input."
+        )
+
+        return ops
+
+    def init_params(self):
+        insize = self.options.get('insize')
+        outsize = self.options.get('outsize')
+        h0 = self.options.get('h0')
+        W = self.options.get('W')
+        b = self.options.get('b')
+        W_h = self.options.get('W_h')
+
+        rng = np.random.RandomState(456)
+
+        if h0 is None:
+            h0 = np.zeros(shape=(outsize,), dtype=theano.config.floatX)
+
+        if W is None:
+            W = np.asarray(
+                rng.uniform(
+                    low=-1/np.sqrt(insize),
+                    high=1/np.sqrt(insize),
+                    size=(insize, outsize)
+                ),
+                dtype=theano.config.floatX
+            )
+
+        if b is None:
+            b = np.zeros(shape=(out,), dtype=theano.config.floatX)
+
+        if W_h is None:
+            W_h = np.asarray(
+                rng.uniform(
+                    low=-1/np.sqrt(outsize),
+                    high=1/np.sqrt(outsize),
+                    size=(outsize, outsize)
+                ),
+                dtype=theano.config.floatX
+            )
+        h0 = theano.shared(value=h0, borrow=True)
+        W = theano.shared(value=W, borrow=True)
+        b = theano.shared(value=b, borrow=True)
+        W_h = theano.shared(value=W_h, borrow=True)
+
+        return [h0, W, b, W_h]
+
+    def generate_input(self):
+        return [T.matrix('x')]
+
+    def generate_output(self, inputs):
+        options = self.options
+        h0 = self.params[0]
+        W = self.params[1]
+        b = self.params[2]
+        W_h = self.params[3]
+        x = inputs[0]
+
+        def one_step(x_t, h_tm1):
+            z = x_t.dot(W) + b
+            m = h_tm1.dot(W_h)
+            return T.tanh(z + m)
+
+        h, updates = theano.scan(
+            fn=one_step,
+            sequences=x,
+            outputs_info=[h0],
+            n_steps=x.shape[0]
+        )
+
+        return h
