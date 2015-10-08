@@ -35,7 +35,7 @@ class AdagradTrainer(Trainer):
         )
         ops.add(
             name="cost_func",
-            value=cost.neg_log_likelihood,
+            value=cost.mean_square_error,
             description="Cost function to be applied to the model's output " + \
                         "and expected output."
         )
@@ -56,7 +56,8 @@ class AdagradTrainer(Trainer):
         options = self.options
         model = options.get('model')
 
-        output = model.output
+        inputs = model.generate_input()
+        output = model.generate_output(inputs)
         t = T.TensorType(output.dtype, (False,) * output.ndim)
         expected_output = t('expected_output')
 
@@ -120,7 +121,6 @@ class AdagradTrainer(Trainer):
             updates=adagrad_reset_update
         )
 
-        inputs = model.input
 
         all_ = inputs + [expected_output]
 
@@ -132,22 +132,15 @@ class AdagradTrainer(Trainer):
     def train(self, inputs, expected_outputs):
         options = self.options
         model = options.get('model')
-        supports_batch = False
-        try:
-            supports_batch = model.options.get('model_supports_batch')
-        except KeyError:
-            pass
 
-        if not supports_batch:
-            grads = [[] for param in model.params]
-            for inp, outp in zip(inputs, expected_outputs):
-                a = list(inp) + [outp]
-                grads_i = self.__get_grads(*a)
-                for g, gi in zip(grads, grads_i):
-                    g.append(gi)
-            grads = [np.mean(grad, axis=0) for grad in grads]
-            self.__train_with_grads(*grads)
-        else:
-            a = np.append(inputs, expected_outputs, 1)
-            self.__train(*a)
+        grads = [np.zeros_like(param.get_value(borrow=True)) 
+                for param in model.params]
+        for inp, outp in zip(inputs, expected_outputs):
+            a = list(inp) + [outp]
+            grads_i = self.__get_grads(*a)
+            for g, gi in zip(grads, grads_i):
+                g += gi
 
+        for g in grads:
+            g /= len(inputs)
+        self.__train_with_grads(*grads)

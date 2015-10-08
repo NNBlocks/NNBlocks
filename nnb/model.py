@@ -30,7 +30,7 @@ class Model(object):
         if inputs is None or not isinstance(inputs, list):
             raise ValueError("The generate_input method should return a list " +
                             "of theano variables.")
-        output = self.generate_output(inputs)
+        outputs = self.generate_output(inputs)
 
         self.feedforward = theano.function(inputs, outputs)
 
