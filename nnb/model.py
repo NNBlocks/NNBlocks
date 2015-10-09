@@ -172,7 +172,13 @@ class VerticalJoinModel(Model):
         m1 = self.options.get('m1')
         m2 = self.options.get('m2')
         out1 = m1.apply(None)
+        if not isinstance(out1, list):
+            raise ValueError(("The model {0} didn't return a list of theano" +
+                                " variables.").format(type(m1)))
         out2 = m2.apply(None)
+        if not isinstance(out2, list):
+            raise ValueError(("The model {0} didn't return a list of theano" +
+                                " variables.").format(type(m2)))
         return out1 + out2 #lists
 
 class HorizontalJoinModel(Model):
@@ -226,7 +232,14 @@ class HorizontalJoinModel(Model):
         m1 = self.options.get('m1')
         m2 = self.options.get('m2')
         out1 = m1.apply(prev)
-        return m2.apply(out1)
+        if not isinstance(out1, list):
+            raise ValueError(("The model {0} didn't return a list of theano" +
+                                " variables.").format(type(m1)))
+        out2 = m2.apply(out1)
+        if not isinstance(out2, list):
+            raise ValueError(("The model {0} didn't return a list of theano" +
+                                " variables.").format(type(m2)))
+        return out2
 
 class Picker(Model):
     @staticmethod
