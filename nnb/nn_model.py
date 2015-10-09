@@ -321,7 +321,7 @@ class RecurrentNeuralNetwork(Model):
             )
 
         if b is None:
-            b = np.zeros(shape=(out,), dtype=theano.config.floatX)
+            b = np.zeros(shape=(outsize,), dtype=theano.config.floatX)
 
         if W_h is None:
             W_h = np.asarray(
