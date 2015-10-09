@@ -1,4 +1,5 @@
 import theano
+import theano.tensor as T
 import nnb.utils as utils
 import abc
 
@@ -6,158 +7,240 @@ class Model(object):
     """The Model class.
     Everything that has an input that generates an output extends this class.
     """
-    __metaclass__ = abc.ABCMeta
-    options = None
-    params = None
+    def __init__(self, **kwargs):
+        self.options = self.init_options()
+        if not isinstance(self.options, utils.Options):
+            raise ValueError("The init_options methd should return an " +
+                            "initialized instance of nnb.utils.Options")
+        self.options.set_from_dict(kwargs)
+        self.options.check()
 
-    def __init__(self, options=None, **kwargs):
-        if options is None:
-            options = self.get_options()
-        if options is None:
-            raise ValueError("The get_options method should return an Options" +
-                            " object.")
-        if not isinstance(options, utils.Options):
-            raise TypeError("Options should be a NN.utils.Options instance." + \
-                            " Got {0} instead".format(type(options)))
-        options.set_from_dict(kwargs)
-        options.check()
-        self.options = options
         self.params = self.init_params()
-        if self.params is None or not isinstance(self.params, list):
-            raise ValueError("The init_params method should return a list of " +
-                            "theano shared variables.")
-        inputs = self.generate_input()
-        if inputs is None or not isinstance(inputs, list):
-            raise ValueError("The generate_input method should return a list " +
-                            "of theano variables.")
-        outputs = self.generate_output(inputs)
-
-        self.feedforward = theano.function(inputs, outputs)
-
-    @abc.abstractmethod
-    def init_params(self):
-        """Returns the parameters of the model.
-        A child class of Model must implement this method.
-        This method should return a list of theano shared variables that will
-        be used as parameters for the model.
-        These parameters can be accessed later from self.params member.
-        """
-        return []
-
-    @abc.abstractmethod
-    def generate_input(self):
-        """Generated a list of suggested inputs for the model.
-        A child class of Model must implement this method.
-        This method should return a list of theano variables. These variables
-        will be used as suggestion for the input of the model. When no
-        information about the input of this model is provided by a composite
-        model, the inputs returned by this method will be used.
-        """
-        return []
-
-    @abc.abstractmethod
-    def generate_output(self, inputs):
-        """Generates the desired output of the model, given an inputs list.
-        A child class of Model must implement this method.
-        This method should return a theano variable derived from the inputs
-        passed as parameters.
-        Args:
-            inputs (List[theano.TensorType]): List of inputs of the model.
-                These inputs won't necessarily be of the same type as returned
-                by the generate_input method. This happend when the output of
-                another model is used as input for this model.
-        """
-        return None
+        if not isinstance(self.params, list):
+            raise ValueError("The init_params method should return a list of" +
+                            " theano shared variables.")
 
     @staticmethod
-    def get_options():
-        """Configure and returns the Options instance for this model.
-        For more information see the nnb.utils.Options docs.
-        """
+    def init_options():
         return utils.Options()
 
+    def init_params(self):
+        return []
+
+    def apply(self, prev):
+        return prev
+
+    def _get_inputs(self):
+        raise NotImplementedError("Couldn't find ways to get the inputs for " +
+                                    "{0}.".format(type(self)))
+
+    def get_io(self):
+        self.params = self.init_params()
+        inputs = self._get_inputs()
+        outputs = self.apply(None)
+        if len(outputs) == 1:
+            outputs = outputs[0]
+        return (inputs, outputs)
+
+    def compile(self, *args):
+        a = self.get_io() + args
+        return theano.function(*a)
+
+    def __and__(self, other):
+        return VerticalJoinModel(m1=self, m2=other)
+
+    def __or__(self, other):
+        return HorizontalJoinModel(m1=self, m2=other)
+
     def __getitem__(self, val):
-        return SliceModel(model=self, slice=val)
+        return self | SliceModel(slice=val)
 
 class SliceModel(Model):
     @staticmethod
-    def get_options():
-        opts = Model.get_options()
-        opts.add(
-            name="model",
-            required=True,
-            value_type=Model,
-            description="Model to be sliced."
-        )
+    def init_options():
+        opts = utils.Options()
         opts.add(
             name="slice",
-            required=True,
-            description="The slice to be used."
+            required=True
+        )
+        return opts
+
+    def apply(self, prev):
+        sli = self.options.get('slice')
+        if len(prev) == 1:
+            return [prev[0][sli]]
+
+        if isinstance(sli, list):
+            out = []
+            for index in list:
+                out.append(prev[index])
+            return out
+
+        if isinstance(sli, int):
+            return [prev[sli]]
+
+        return prev[sli]
+
+class InputLayer(Model):
+
+    @staticmethod
+    def init_options():
+        opts = utils.Options()
+        opts.add(
+            name="ndim",
+            required=True
+        )
+        opts.add(
+            name="dtype",
+            value=theano.config.floatX
+        )
+        opts.add(
+            name="name",
+            value="input"
+        )
+        return opts
+
+    def _get_inputs(self):
+        if hasattr(self, '_inp'):
+            return [self._inp]
+
+        ndim = self.options.get('ndim')
+        dtype = self.options.get('dtype')
+        t = T.TensorType(dtype, (False,) * ndim)
+
+        self._inp = t(self.options.get('name'))
+
+        return [self._inp]
+
+    def apply(self, prev):
+        if prev is not None:
+            print prev
+            raise ValueError("The input layer can't have inputs from other " +
+                            "models.")
+        return [self._inp]
+
+class VerticalJoinModel(Model):
+
+    @staticmethod
+    def init_options():
+        opts = utils.Options()
+        opts.add(
+            name="m1",
+            required=True
+        )
+        opts.add(
+            name="m2",
+            required=True
+        )
+
+        return opts
+
+    def init_params(self):
+        m1 = self.options.get('m1')
+        m2 = self.options.get('m2')
+        return list(set(m1.params + m2.params))
+
+    def _get_inputs(self):
+        m1 = self.options.get('m1')
+        m2 = self.options.get('m2')
+        inp1 = []
+        try:
+            inp1 = m1._get_inputs()
+        except NotImplementedError:
+            pass
+        inp2 = []
+        try:
+            inp2 = m2._get_inputs()
+        except NotImplementedError:
+            pass
+
+        with_duplicates = inp1 + inp2
+        without_duplicates = []
+        check_set = set()
+
+        for inp in with_duplicates:
+            if inp in check_set:
+                continue
+            check_set.add(inp)
+            without_duplicates.append(inp)
+
+        return without_duplicates
+
+    def apply(self, prev):
+        if prev is not None:
+            raise ValueError("A vertical join can't have an input")
+        m1 = self.options.get('m1')
+        m2 = self.options.get('m2')
+        out1 = m1.apply(None)
+        out2 = m2.apply(None)
+        return out1 + out2 #lists
+
+class HorizontalJoinModel(Model):
+
+    @staticmethod
+    def init_options():
+        opts = utils.Options()
+        opts.add(
+            name="m1",
+            required=True
+        )
+        opts.add(
+            name="m2",
+            required=True
+        )
+
+        return opts
+
+    def init_params(self):
+        m1 = self.options.get('m1')
+        m2 = self.options.get('m2')
+        return list(set(m1.params + m2.params))
+
+    def _get_inputs(self):
+        m1 = self.options.get('m1')
+        m2 = self.options.get('m2')
+        inp1 = []
+        try:
+            inp1 = m1._get_inputs()
+        except NotImplementedError:
+            pass
+        inp2 = []
+        try:
+            inp2 = m2._get_inputs()
+        except NotImplementedError:
+            pass
+
+        with_duplicates = inp1 + inp2
+        without_duplicates = []
+        check_set = set()
+
+        for inp in with_duplicates:
+            if inp in check_set:
+                continue
+            check_set.add(inp)
+            without_duplicates.append(inp)
+
+        return without_duplicates
+
+    def apply(self, prev):
+        m1 = self.options.get('m1')
+        m2 = self.options.get('m2')
+        out1 = m1.apply(prev)
+        return m2.apply(out1)
+
+class Picker(Model):
+    @staticmethod
+    def init_options():
+        opts = utils.Options()
+        opts.add(
+            name='choices',
+            required='True'
         )
         return opts
 
     def init_params(self):
-        opts = self.options
-        return opts.get("model").params
+        choices = self.options.get('choices')
+        return [theano.shared(value=choices, borrow=True)]
 
-    def generate_input(self):
-        return self.options.get("model").generate_input()
-
-    def generate_output(self, inputs):
-        model_out = self.options.get("model").generate_output(inputs)
-        model_slice = self.options.get("slice")
-        return model_out[model_slice]
-
-
-class CompositeModel(Model):
-    @staticmethod
-    def get_options():
-        ops = Model.get_options()
-        ops.add(
-            name="models",
-            required=True,
-            value_type=list,
-            description="""The models to be composed."""
-        )
-        return ops
-
-    def init_params(self):
-        models = self.options.get('models')
-
-        #The model_supports_batch has to be inferred after the models are set
-        supports_batch = True
-        for model in models:
-            try:
-                model_supports_batch = model.options.get('model_supports_batch')
-                if not model_supports_batch:
-                    supports_batch = False
-                    break
-            except KeyError:
-                supports_batch = False
-                break
-        self.options.add(
-            name="model_supports_batch",
-            value=supports_batch,
-            readonly=True,
-            description="""Tells if this model supports batch feedforward"""
-        )
-
-        params = []
-
-        for model in models:
-            params += model.params
-
-        return params
-
-    def generate_input(self):
-        return self.options.get('models')[0].generate_input()
-
-    def generate_output(self, inputs):
-        models = self.options.get('models')
-
-        result = models[0].generate_output(inputs)
-
-        for i in xrange(1, len(models)):
-            result = models[i].generate_output([result])
-
-        return result
+    def apply(self, prev):
+        return [self.params[0][prev[0]]]

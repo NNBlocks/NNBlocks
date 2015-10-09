@@ -56,8 +56,7 @@ class AdagradTrainer(Trainer):
         options = self.options
         model = options.get('model')
 
-        inputs = model.generate_input()
-        output = model.generate_output(inputs)
+        inputs, output = model.get_io()
         t = T.TensorType(output.dtype, (False,) * output.ndim)
         expected_output = t('expected_output')
 

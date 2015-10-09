@@ -1,5 +1,6 @@
 from nnb import Model
 import numpy as np
+import nnb.utils as utils
 import theano
 import theano.tensor as T
 
@@ -8,8 +9,8 @@ class PerceptronLayer(Model):
     """
 
     @staticmethod
-    def get_options():
-        ops = Model.get_options()
+    def init_options():
+        ops = utils.Options()
         ops.add(
             name="insize",
             description="The size of the input of the layer.",
@@ -21,12 +22,6 @@ class PerceptronLayer(Model):
             description="The size of the output of the layer.",
             value_type=int,
             required=True
-        )
-        ops.add(
-            name="model_supports_batch",
-            value=True,
-            readonly=True,
-            description="""Tells if this model supports batch feedforward"""
         )
         ops.add(
             name='W',
@@ -73,16 +68,12 @@ class PerceptronLayer(Model):
 
         return [W, b]
 
-    def generate_input(self):
-        inp = T.matrix("layer_input")
-        return [inp]
-
-    def generate_output(self, inputs):
+    def apply(self, prev):
         W = self.params[0]
         b = self.params[1]
-        inp = inputs[0]
+        inp = prev[0]
 
-        return T.tanh(inp.dot(W) + b)
+        return [T.tanh(inp.dot(W) + b)]
 
 
 class SoftmaxLayer(Model):
@@ -90,8 +81,8 @@ class SoftmaxLayer(Model):
     """
 
     @staticmethod
-    def get_options():
-        ops = Model.get_options()
+    def init_options():
+        ops = utils.Options()
         ops.add(
             name="model_supports_batch",
             value=True,
@@ -162,15 +153,12 @@ class SoftmaxLayer(Model):
 
         return [W_softmax, b_softmax]
 
-    def generate_input(self):
-        return [T.matrix("softmax_in")]
-
-    def generate_output(self, inputs):
-        inps = inputs[0]
+    def apply(self, prev):
+        inps = prev[0]
         W_softmax = self.params[0]
         b_softmax = self.params[1]
 
-        return T.nnet.softmax(T.dot(inps, W_softmax) + b_softmax)
+        return [T.nnet.softmax(T.dot(inps, W_softmax) + b_softmax)]
 
 
 class RecursiveNeuralNetwork(Model):
@@ -181,58 +169,36 @@ class RecursiveNeuralNetwork(Model):
     """
 
     @staticmethod
-    def get_options():
-        ops = Model.get_options()
+    def init_options():
+        ops = utils.Options()
         ops.add(
             name="comp_model",
             description="The composition model to be used in the tree",
             value_type=Model
         )
         ops.add(
-            name="word_vecs",
+            name="insize",
             required=True,
-            value_type=np.ndarray,
-            description="""Word vectors used for the compositionality"""
-        )
-        ops.add(
-            name="model_supports_batch",
-            value=False,
-            readonly=True,
-            description="""Tells if this model supports batch feedforward"""
+            value_type=int
         )
 
         return ops
 
     def init_params(self):
         options = self.options
-        word_vecs = options.get('word_vecs')
-        word_dim = word_vecs.shape[1]
+        word_dim = options.get('insize')
         comp_model = options.get('comp_model')
 
         if comp_model is None:
             comp_model = PerceptronLayer(insize=word_dim * 2, outsize=word_dim)
             options.set('comp_model', comp_model)
 
-        word_vecs = theano.shared(
-            value=word_vecs,
-            name="word_vecs",
-            borrow=True
-        )
+        return comp_model.params
 
-        return [word_vecs] + comp_model.params
-
-    def generate_input(self):
-        sentence = T.ivector("sentence")
-        comp_tree = T.imatrix("comp_tree")
-        return [sentence, comp_tree]
-
-    def generate_output(self, inputs):
-        sentence = inputs[0]
+    def apply(self, inputs):
+        x = inputs[0]
         comp_tree = inputs[1]
-        word_vecs = self.params[0]
         comp_model = self.options.get('comp_model')
-
-        x = word_vecs[sentence, :]
 
         #Stanford NLP does this. Not described in the paper.
         x = T.tanh(x)
@@ -240,7 +206,7 @@ class RecursiveNeuralNetwork(Model):
         #Composition function for two word_vecs
         def compose(u, v):
             stack = T.concatenate([u, v], axis=0)
-            out = comp_model.generate_output([stack])
+            out = comp_model.apply([stack])[0]
             if out.ndim == 2:
                 import warnings
                 warnings.warn("The composition model's output is 2 " +
@@ -281,50 +247,15 @@ class RecursiveNeuralNetwork(Model):
         #Get the last iteration's values
         h = h[-1]
 
-        return h
-
-
-class SiameseNetwork(Model):
-    """A Siamese network
-    Bromley, Jane, et al. "Signature verification using a "Siamese" time delay
-    neural network." International Journal of Pattern Recognition and Artificial
-    Intelligence 7.04 (1993): 669-688.
-    """
-    @staticmethod
-    def get_options():
-        ops = Model.get_options()
-
-        ops.add(
-            name="model",
-            required=True,
-            value_type=Model,
-            description="Model to be used for the siamese network"
-        )
-
-        return ops
-    def init_params(self):
-        options = self.options
-
-        return options.get('model').params
-
-    def generate_input(self):
-        inputs = self.options.get('model').generate_input()
-        inputs += self.options.get('model').generate_input()
-        return inputs
-
-    def generate_output(self, inputs):
-        out1 = self.options.get('model').generate_output(inputs[:len(inputs)/2])
-        out2 = self.options.get('model').generate_output(inputs[len(inputs)/2:])
-
-        return T.dot(out1, out2) / (out1.norm(2) * out2.norm(2))
+        return [h]
 
 
 class RecurrentNeuralNetwork(Model):
     """A simple recurrent neural network
     """
     @staticmethod
-    def get_options():
-        ops = Model.get_options()
+    def init_options():
+        ops = utils.Options()
 
         ops.add(
             name='insize',
@@ -408,10 +339,7 @@ class RecurrentNeuralNetwork(Model):
 
         return [h0, W, b, W_h]
 
-    def generate_input(self):
-        return [T.matrix('x')]
-
-    def generate_output(self, inputs):
+    def apply(self, inputs):
         options = self.options
         h0 = self.params[0]
         W = self.params[1]
@@ -431,4 +359,4 @@ class RecurrentNeuralNetwork(Model):
             n_steps=x.shape[0]
         )
 
-        return h
+        return [h]

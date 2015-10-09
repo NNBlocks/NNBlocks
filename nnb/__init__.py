@@ -1,13 +1,12 @@
 from nnb.model import (
     Model,
-    SliceModel,
-    CompositeModel
+    InputLayer,
+    Picker
 )
 from nnb.nn_model import (
     PerceptronLayer,
     SoftmaxLayer,
     RecursiveNeuralNetwork,
-    SiameseNetwork,
     RecurrentNeuralNetwork
 )
 
