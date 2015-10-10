@@ -7,7 +7,8 @@ from nnb.nn_model import (
     PerceptronLayer,
     SoftmaxLayer,
     RecursiveNeuralNetwork,
-    RecurrentNeuralNetwork
+    RecurrentNeuralNetwork,
+    SimpleRecurrency
 )
 
 from nnb.rntn import RecursiveNeuralTensorNetwork

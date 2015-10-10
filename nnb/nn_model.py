@@ -250,8 +250,8 @@ class RecursiveNeuralNetwork(Model):
         return [h]
 
 
-class RecurrentNeuralNetwork(Model):
-    """A simple recurrent neural network
+class SimpleRecurrency(Model):
+    """A simple recurrency for a RecurrentNeuralNetwork
     """
     @staticmethod
     def init_options():
@@ -269,12 +269,6 @@ class RecurrentNeuralNetwork(Model):
             value_type=int,
             required=True,
             description="Size of each output of the network."
-        )
-
-        ops.add(
-            name='h0',
-            value_type=np.ndarray,
-            description="Initial 'memory' input."
         )
 
         ops.add(
@@ -300,15 +294,11 @@ class RecurrentNeuralNetwork(Model):
     def init_params(self):
         insize = self.options.get('insize')
         outsize = self.options.get('outsize')
-        h0 = self.options.get('h0')
         W = self.options.get('W')
         b = self.options.get('b')
         W_h = self.options.get('W_h')
 
         rng = np.random.RandomState(456)
-
-        if h0 is None:
-            h0 = np.zeros(shape=(outsize,), dtype=theano.config.floatX)
 
         if W is None:
             W = np.asarray(
@@ -332,25 +322,87 @@ class RecurrentNeuralNetwork(Model):
                 ),
                 dtype=theano.config.floatX
             )
-        h0 = theano.shared(value=h0, borrow=True)
         W = theano.shared(value=W, borrow=True)
         b = theano.shared(value=b, borrow=True)
         W_h = theano.shared(value=W_h, borrow=True)
 
-        return [h0, W, b, W_h]
+        return [W, b, W_h]
+
+    def apply(self, inputs):
+        W = self.params[0]
+        b = self.params[1]
+        W_h = self.params[2]
+        x_t = inputs[0]
+        h_tm1 = inputs[1]
+
+        z = x_t.dot(W) + b
+        m = h_tm1.dot(W_h)
+        return [T.tanh(z + m)]
+
+class RecurrentNeuralNetwork(Model):
+    """A recurrent neural network
+    """
+    @staticmethod
+    def init_options():
+        ops = utils.Options()
+
+        ops.add(
+            name='model',
+            value_type=Model,
+            description="Model to be used for the recurrency."
+        )
+
+        ops.add(
+            name='h0',
+            value_type=np.ndarray,
+            description="Initial 'memory' input."
+        )
+
+        ops.add(
+            name='insize',
+            value_type=int,
+            description="Size of each input vector of the model. This is " +
+                        "only used if the option 'model' is not set."
+        )
+
+        ops.add(
+            name='outsize',
+            required=True,
+            value_type=int,
+            description="Size of each output vector of the model. This is " +
+                        "required so the initial memory input h0 can be " +
+                        "initialized."
+        )
+
+        return ops
+
+    def init_params(self):
+        model = self.options.get('model')
+        insize = self.options.get('insize')
+        outsize = self.options.get('outsize')
+        h0 = self.options.get('h0')
+
+        if h0 is None:
+            h0 = np.zeros(shape=(outsize,), dtype=theano.config.floatX)
+
+        h0 = theano.shared(value=h0, borrow=True)
+
+        if model is None:
+            if insize is None:
+                raise ValueError("Either the option 'model' or 'insize' must " +
+                                "be set in RecurrentNeuralNetwork.")
+            model = SimpleRecurrency(insize=insize, outsize=outsize)
+            self.options.set('model', model)
+
+        return [h0] + model.params
 
     def apply(self, inputs):
         options = self.options
         h0 = self.params[0]
-        W = self.params[1]
-        b = self.params[2]
-        W_h = self.params[3]
         x = inputs[0]
 
         def one_step(x_t, h_tm1):
-            z = x_t.dot(W) + b
-            m = h_tm1.dot(W_h)
-            return T.tanh(z + m)
+            return options.get('model').apply([x_t, h_tm1])[0]
 
         h, updates = theano.scan(
             fn=one_step,
