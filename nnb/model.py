@@ -167,15 +167,13 @@ class VerticalJoinModel(Model):
         return without_duplicates
 
     def apply(self, prev):
-        if prev is not None:
-            raise ValueError("A vertical join can't have an input")
         m1 = self.options.get('m1')
         m2 = self.options.get('m2')
-        out1 = m1.apply(None)
+        out1 = m1.apply(prev)
         if not isinstance(out1, list):
             raise ValueError(("The model {0} didn't return a list of theano" +
                                 " variables.").format(type(m1)))
-        out2 = m2.apply(None)
+        out2 = m2.apply(prev)
         if not isinstance(out2, list):
             raise ValueError(("The model {0} didn't return a list of theano" +
                                 " variables.").format(type(m2)))
