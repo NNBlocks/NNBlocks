@@ -32,6 +32,11 @@ class PerceptronLayer(Model):
             name='b',
             description="Vector of the network's biases, with length outsize"
         )
+        ops.add(
+            name='activation_func',
+            value=T.nnet.sigmoid
+        )
+
         return ops
 
     def init_params(self):
@@ -73,7 +78,7 @@ class PerceptronLayer(Model):
         b = self.params[1]
         inp = prev[0]
 
-        return [T.tanh(inp.dot(W) + b)]
+        return [self.options.get('activation_func')(inp.dot(W) + b)]
 
 
 class SoftmaxLayer(Model):
@@ -200,9 +205,6 @@ class RecursiveNeuralNetwork(Model):
         comp_tree = inputs[1]
         comp_model = self.options.get('comp_model')
 
-        #Stanford NLP does this. Not described in the paper.
-        x = T.tanh(x)
-
         #Composition function for two word_vecs
         def compose(u, v):
             stack = T.concatenate([u, v], axis=0)
@@ -289,6 +291,11 @@ class SimpleRecurrency(Model):
             description="Weight matrix for h_t-1, the memory input."
         )
 
+        ops.add(
+            name='activation_func',
+            value=T.nnet.sigmoid
+        )
+
         return ops
 
     def init_params(self):
@@ -337,7 +344,7 @@ class SimpleRecurrency(Model):
 
         z = x_t.dot(W) + b
         m = h_tm1.dot(W_h)
-        return [T.tanh(z + m)]
+        return [self.options.get('activation_func')(z + m)]
 
 class RecurrentNeuralNetwork(Model):
     """A recurrent neural network
