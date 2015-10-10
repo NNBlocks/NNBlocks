@@ -255,3 +255,17 @@ class Picker(Model):
 
     def apply(self, prev):
         return [self.params[0][prev[0]]]
+
+class ConcatenationModel(Model):
+    @staticmethod
+    def init_options():
+        opts = utils.Options()
+        opts.add(
+            name='axis',
+            value=0,
+            value_type=int
+        )
+        return opts
+
+    def apply(self, prev):
+        return [T.concatenate(prev, axis=self.options.get('axis'))]

@@ -1,7 +1,8 @@
 from nnb.model import (
     Model,
     InputLayer,
-    Picker
+    Picker,
+    ConcatenationModel
 )
 from nnb.nn_model import (
     PerceptronLayer,
