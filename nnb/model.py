@@ -269,3 +269,36 @@ class ConcatenationModel(Model):
 
     def apply(self, prev):
         return [T.concatenate(prev, axis=self.options.get('axis'))]
+
+class CustomModel(Model):
+    @staticmethod
+    def init_options():
+        opts = utils.Options()
+        opts.add(
+            name='fn',
+            required=True
+        )
+        opts.add(
+            name='params',
+            value=[],
+            value_type=list
+        )
+
+        return opts
+
+    def init_params(self):
+        params = self.options.get('params')
+        params_out = []
+        for p in params:
+            if not isinstance(p, theano.compile.sharedvalue.SharedVariable):
+                p = theano.shared(value=p, borrow=True)
+            params_out.append(p)
+        return params_out
+
+    def apply(self, prev):
+        fn = self.options.get('fn')
+        a = prev + self.params
+        o = fn(*a)
+        if not isinstance(o, list):
+            o = [o]
+        return o
