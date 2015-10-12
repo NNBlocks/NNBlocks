@@ -1,8 +1,6 @@
 import theano.tensor as T
 import theano
 import numpy as np
-import nnb
-import nnb.cost as cost
 from nnb.train import Trainer
 
 class AdagradTrainer(Trainer):
@@ -11,34 +9,6 @@ class AdagradTrainer(Trainer):
     @staticmethod
     def get_options():
         ops = Trainer.get_options()
-        ops.add(
-            name="model",
-            required=True,
-            description="The model to be trained.",
-            value_type=nnb.Model
-        )
-        ops.add(
-            name="L2_reg",
-            value=0.,
-            value_type=[float, list],
-            description="L2 regularization values. It can be a float that " + \
-                        "will be applied for all parameters or a list of " + \
-                        "floats, one for each parameter of the model."
-        )
-        ops.add(
-            name="L1_reg",
-            value=0.,
-            value_type=[float, list],
-            description="L1 regularization values. It can be a float that " + \
-                        "will be applied for all parameters or a list of " + \
-                        "floats, one for each parameter of the model."
-        )
-        ops.add(
-            name="cost_func",
-            value=cost.mean_square_error,
-            description="Cost function to be applied to the model's output " + \
-                        "and expected output."
-        )
         ops.add(
             name="hist",
             value_type=list,
@@ -56,28 +26,11 @@ class AdagradTrainer(Trainer):
         options = self.options
         model = options.get('model')
 
-        inputs, output = model.get_io()
-        t = T.TensorType(output.dtype, (False,) * output.ndim)
-        expected_output = t('expected_output')
-
-        cost_func = options.get('cost_func')
-        cost = cost_func(output, expected_output)
-
         params = model.params
 
-        L2_reg = options.get('L2_reg')
-
-        if isinstance(L2_reg, float):
-            L2_reg = [L2_reg for p in params]
-
-        L1_reg = options.get('L1_reg')
-
-        if isinstance(L1_reg, float):
-            L1_reg = [L1_reg for p in params]
-
-        for l1, l2, param in zip(L1_reg, L2_reg, params):
-            cost += abs(param).sum() * l1
-            cost += T.sqr(param).sum() * l2
+        inputs, output = self.get_io()
+        expected_output = self.get_expected_output()
+        cost = self.get_cost()
 
         params_grads = [T.grad(cost=cost, wrt=param) for param in params]
 
