@@ -3,7 +3,8 @@ from nnb.model import (
     InputLayer,
     Picker,
     ConcatenationModel,
-    CustomModel
+    CustomModel,
+    SliceModel
 )
 from nnb.nn_model import (
     PerceptronLayer,

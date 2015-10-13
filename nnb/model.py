@@ -72,7 +72,7 @@ class SliceModel(Model):
 
         if isinstance(sli, list):
             out = []
-            for index in list:
+            for index in sli:
                 out.append(prev[index])
             return out
 
