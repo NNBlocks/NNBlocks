@@ -47,14 +47,12 @@ import numpy as np
 word_vecs = np.random.random(size=(15,5))
 #15 word matrices of size 5x5
 word_mats = np.random.random(size=(15,5,5))
-W_matrices = np.random.random(size=(10,5))
 ```
 Here we just initialize some of our network's parameters, where
 * _word_vecs_ is all of our vocabulary vectors
 * _word_mats_ is all of our vocabulary matrices
-* _W_matrices_ is a network parameter that will compose two words' matrices
 
-The rest of the parameters (the words composition matrix and bias vector) will be handled by the network's perceptron layer. We need to declare these other parameters here because they don't fit in any of NNBlocks already implemented models. This sounds like a bad thing, but it's actually a big plus that you can plug in your own parameters and use them in the network easily.
+The rest of the parameters will be handled by the network's perceptron layer. We need to declare these parameters here because they don't fit in any of NNBlocks already implemented models. This sounds like a bad thing, but it's actually a big plus that you can plug in your own parameters and use them in the network easily.
 
 ```python
 comp_tree = nnb.InputLayer(ndim=2, dtype='int32')
@@ -76,7 +74,7 @@ words_comp = \
 matrix_comp = \
     nnb.SliceModel(slice=[1, 3]) | \
     nnb.ConcatenationModel(axis=1) | \
-    nnb.CustomModel(fn=lambda x, W_m: x.dot(W_m), params=[W_matrices])
+    nnb.PerceptronLayer(insize=10, outsize=5, activation_func=lambda x: x)
 
 comp_model = words_comp & matrix_comp
 ```
