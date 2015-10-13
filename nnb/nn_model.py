@@ -1,6 +1,7 @@
 from nnb import Model
 import warnings
 import numpy as np
+import nnb
 import nnb.utils as utils
 import theano
 import theano.tensor as T
@@ -197,13 +198,14 @@ class RecursiveNeuralNetwork(Model):
         if comp_model is not None and word_dim is not None:
             warning.warn("You only have to set either the 'insize' or the " +
                         "'comp_model' option, not both. Using just the " +
-                        "'comp_model' one.")
+                        "'comp_model'.")
 
         if comp_model is None:
             if word_dim is None:
                 raise ValueError("Either the 'insize' or the 'comp_model' " +
                                 "option should be set.")
-            comp_model = PerceptronLayer(insize=word_dim * 2, outsize=word_dim)
+            comp_model = nnb.ConcatenationModel(axis=0)
+            comp_model |= PerceptronLayer(insize=word_dim * 2, outsize=word_dim)
             options.set('comp_model', comp_model)
 
         return comp_model.params
@@ -212,54 +214,54 @@ class RecursiveNeuralNetwork(Model):
         return self.options.get('comp_model')._get_inputs()
 
     def apply(self, inputs):
-        x = inputs[0]
-        comp_tree = inputs[1]
+        comp_tree = inputs[0]
+        x = inputs[1:]
         comp_model = self.options.get('comp_model')
 
-        #Composition function for two word_vecs
-        def compose(u, v):
-            stack = T.concatenate([u, v], axis=0)
-            out = comp_model.apply([stack])[0]
-            if out.ndim == 2:
-                warnings.warn("The composition model's output is 2 " +
-                            "dimensional. Using the first row of it as " +
-                            "composition.", RuntimeWarning)
-                out = out[0]
-            return out
-
         #One theano.scan step in the RNN feedforward
-        def one_step(children, index, partial):
-            return T.set_subtensor(
-                        partial[index],
-                        compose(
-                            partial[children[0]],
-                            partial[children[1]]
-                        )
-                    )
+        def one_step(children, index, *partials):
+            inputs1 = []
+            inputs2 = []
+            for partial in partials:
+                inputs1.append(partial[children[0]])
+                inputs2.append(partial[children[1]])
+            model_out = comp_model.apply(inputs1 + inputs2)
+            new_partials = []
+            for p, o in zip(partials, model_out):
+                new_partials.append(T.set_subtensor(p[index], o))
 
-        #Allocate partial results matrix. Each line will hold a node's value
-        partial = T.alloc(0., x.shape[0] + comp_tree.shape[0], x.shape[1])
+            return tuple(new_partials)
 
-        #Set the first n nodes to be the phrase's word_vecs
-        partial = T.set_subtensor(partial[:x.shape[0]], x)
+        partials = []
+        for o in x:
+            shape = []
+            for i in range(1, o.ndim):
+                shape.append(o.shape[i])
+
+            partial = T.alloc(0., o.shape[0] + comp_tree.shape[0], *shape)
+            partial = T.set_subtensor(partial[:o.shape[0]], o)
+            partials.append(partial)
 
         #Execute the scan
         h, _ = theano.scan(
             fn=one_step,
-            outputs_info=partial,
+            outputs_info=partials,
             sequences=[
                 comp_tree,
                 T.arange(
-                    x.shape[0],
-                    x.shape[0] + comp_tree.shape[0]
+                    x[0].shape[0],
+                    x[0].shape[0] + comp_tree.shape[0]
                 )
             ]
         )
 
         #Get the last iteration's values
-        h = h[-1]
+        if isinstance(h, list):
+            h = [o[-1] for o in h]
+        else:
+            h = [h[-1]]
 
-        return [h]
+        return h
 
 
 class SimpleRecurrency(Model):
@@ -357,7 +359,11 @@ class SimpleRecurrency(Model):
         return [self.options.get('activation_func')(z + m)]
 
 class RecurrentNeuralNetwork(Model):
-    """A recurrent neural network
+    """A recurrent neural network.
+    The model inputs will be:
+        0-n: x_t
+        rest: h_tm1
+    where n is the number of inputs per time t
     """
     @staticmethod
     def init_options():
@@ -371,7 +377,7 @@ class RecurrentNeuralNetwork(Model):
 
         ops.add(
             name='h0',
-            value_type=np.ndarray,
+            value_type=[np.ndarray, list],
             description="Initial 'memory' input."
         )
 
@@ -384,7 +390,6 @@ class RecurrentNeuralNetwork(Model):
 
         ops.add(
             name='outsize',
-            required=True,
             value_type=int,
             description="Size of each output vector of the model. This is " +
                         "required so the initial memory input h0 can be " +
@@ -399,36 +404,57 @@ class RecurrentNeuralNetwork(Model):
         outsize = self.options.get('outsize')
         h0 = self.options.get('h0')
 
-        if h0 is None:
-            h0 = np.zeros(shape=(outsize,), dtype=theano.config.floatX)
-
-        h0 = theano.shared(name='h0', value=h0, borrow=True)
-
         if model is None:
-            if insize is None:
-                raise ValueError("Either the option 'model' or 'insize' must " +
-                                "be set in RecurrentNeuralNetwork.")
+            if insize is None or outsize is None:
+                raise ValueError("Either the option 'model' or 'insize'" +
+                                "+'outsize' should be set in " +
+                                "RecurrentNeuralNetwork.")
+            if h0 is None:
+                h0 = np.zeros(shape=(outsize,), dtype=theano.config.floatX)
+            h0 = [theano.shared(name='h0', value=h0, borrow=True)]
             model = SimpleRecurrency(insize=insize, outsize=outsize)
             self.options.set('model', model)
+        else:
+            if h0 is None:
+                raise ValueError("The option 'h0' should be set if you are " +
+                                "setting your own model for recurrency.")
+            if not isinstance(h0, list):
+                h0 = [theano.shared(name='h0', value=h0, borrow=True)]
+            else:
+                h0_n = []
+                for i in range(len(h0)):
+                    h0_n.append(
+                        theano.shared(
+                            name='h0_{0}'.format(i),
+                            value=h0,
+                            borrow=True
+                        )
+                    )
+                h0 = h0_n
 
-        return [h0] + model.params
+
+        return h0 + model.params
 
     def _get_inputs(self):
         return self.options.get('model')._get_inputs()
 
     def apply(self, inputs):
         options = self.options
-        h0 = self.params[0]
-        x = inputs[0]
+        model = options.get('model')
+        h0 = self.params[:len(self.params) - len(model.params)]
+        print h0, inputs
 
-        def one_step(x_t, h_tm1):
-            return options.get('model').apply([x_t, h_tm1])[0]
+        def one_step(*args):
+            return tuple(model.apply(list(args)))
 
         h, updates = theano.scan(
             fn=one_step,
-            sequences=x,
-            outputs_info=[h0],
-            n_steps=x.shape[0]
+            sequences=inputs,
+            outputs_info=h0,
+            n_steps=inputs[0].shape[0]
         )
 
-        return [h]
+        if not isinstance(h, list):
+            h = [h]
+
+        return h
