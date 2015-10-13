@@ -1,4 +1,5 @@
 from nnb import Model
+import warnings
 import numpy as np
 import nnb.utils as utils
 import theano
@@ -183,7 +184,6 @@ class RecursiveNeuralNetwork(Model):
         )
         ops.add(
             name="insize",
-            required=True,
             value_type=int
         )
 
@@ -194,11 +194,22 @@ class RecursiveNeuralNetwork(Model):
         word_dim = options.get('insize')
         comp_model = options.get('comp_model')
 
+        if comp_model is not None and word_dim is not None:
+            warning.warn("You only have to set either the 'insize' or the " +
+                        "'comp_model' option, not both. Using just the " +
+                        "'comp_model' one.")
+
         if comp_model is None:
+            if word_dim is None:
+                raise ValueError("Either the 'insize' or the 'comp_model' " +
+                                "option should be set.")
             comp_model = PerceptronLayer(insize=word_dim * 2, outsize=word_dim)
             options.set('comp_model', comp_model)
 
         return comp_model.params
+
+    def _get_inputs(self):
+        return self.options.get('comp_model')._get_inputs()
 
     def apply(self, inputs):
         x = inputs[0]
@@ -210,7 +221,6 @@ class RecursiveNeuralNetwork(Model):
             stack = T.concatenate([u, v], axis=0)
             out = comp_model.apply([stack])[0]
             if out.ndim == 2:
-                import warnings
                 warnings.warn("The composition model's output is 2 " +
                             "dimensional. Using the first row of it as " +
                             "composition.", RuntimeWarning)
@@ -392,7 +402,7 @@ class RecurrentNeuralNetwork(Model):
         if h0 is None:
             h0 = np.zeros(shape=(outsize,), dtype=theano.config.floatX)
 
-        h0 = theano.shared(value=h0, borrow=True)
+        h0 = theano.shared(name='h0', value=h0, borrow=True)
 
         if model is None:
             if insize is None:
@@ -402,6 +412,9 @@ class RecurrentNeuralNetwork(Model):
             self.options.set('model', model)
 
         return [h0] + model.params
+
+    def _get_inputs(self):
+        return self.options.get('model')._get_inputs()
 
     def apply(self, inputs):
         options = self.options

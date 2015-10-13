@@ -113,11 +113,9 @@ class InputLayer(Model):
         return [self._inp]
 
     def apply(self, prev):
-        if prev is not None:
-            print prev
-            raise ValueError("The input layer can't have inputs from other " +
-                            "models.")
-        return [self._inp]
+        if prev is None:
+            prev = []
+        return [self._inp] + prev
 
 class VerticalJoinModel(Model):
 
