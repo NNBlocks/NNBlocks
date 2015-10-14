@@ -55,6 +55,9 @@ class Model(object):
     def __getitem__(self, val):
         return self | SliceModel(slice=val)
 
+    def __iter__(self):
+        raise TypeError('NNBlocks Models are not iterable')
+
 class SliceModel(Model):
     @staticmethod
     def init_options():
