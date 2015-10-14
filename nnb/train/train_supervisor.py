@@ -14,7 +14,7 @@ class TrainSupervisor(object):
         opts.add(
             name='dataset',
             required=True,
-            value_type=np.ndarray
+            value_type=[np.ndarray, list]
         )
         opts.add(
             name='trainer',
@@ -23,7 +23,7 @@ class TrainSupervisor(object):
         )
         opts.add(
             name='eval_dataset',
-            value_type=np.ndarray
+            value_type=[np.ndarray, list]
         )
         opts.add(
             name='eval_interval',
@@ -114,7 +114,7 @@ class TrainSupervisor(object):
             print '~Epoch {0}~'.format(epoch + 1)
             init_time = time.time()
             if permute:
-                dataset = rng.permutation(dataset)
+                rng.shuffle(dataset)
             iterations = len(dataset) / batch_size
             for i in xrange(iterations):
                 si = i * batch_size
