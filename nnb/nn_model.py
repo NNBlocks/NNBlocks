@@ -426,7 +426,7 @@ class RecurrentNeuralNetwork(Model):
                     h0_n.append(
                         theano.shared(
                             name='h0_{0}'.format(i),
-                            value=h0,
+                            value=h0[i],
                             borrow=True
                         )
                     )
@@ -442,7 +442,6 @@ class RecurrentNeuralNetwork(Model):
         options = self.options
         model = options.get('model')
         h0 = self.params[:len(self.params) - len(model.params)]
-        print h0, inputs
 
         def one_step(*args):
             return tuple(model.apply(list(args)))
@@ -450,8 +449,7 @@ class RecurrentNeuralNetwork(Model):
         h, updates = theano.scan(
             fn=one_step,
             sequences=inputs,
-            outputs_info=h0,
-            n_steps=inputs[0].shape[0]
+            outputs_info=h0
         )
 
         if not isinstance(h, list):
