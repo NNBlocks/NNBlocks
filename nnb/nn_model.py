@@ -358,6 +358,146 @@ class SimpleRecurrency(Model):
         m = h_tm1.dot(W_h)
         return [self.options.get('activation_func')(z + m)]
 
+class LSTMRecurrency(Model):
+    @staticmethod
+    def init_options():
+        opts = utils.Options()
+        opts.add(
+            name='insize',
+            required=True,
+            value_type=int
+        )
+        opts.add(
+            name='outsize',
+            required=True,
+            value_type=int
+        )
+        opts.add(
+            name='Wi',
+            value_type=np.ndarray
+        )
+        opts.add(
+            name='Wf',
+            value_type=np.ndarray
+        )
+        opts.add(
+            name='Wc',
+            value_type=np.ndarray
+        )
+        opts.add(
+            name='Wo',
+            value_type=np.ndarray
+        )
+        opts.add(
+            name='Ui',
+            value_type=np.ndarray
+        )
+        opts.add(
+            name='Uf',
+            value_type=np.ndarray
+        )
+        opts.add(
+            name='Uc',
+            value_type=np.ndarray
+        )
+        opts.add(
+            name='Uo',
+            value_type=np.ndarray
+        )
+        opts.add(
+            name='Vo',
+            value_type=np.ndarray
+        )
+        opts.add(
+            name='bi',
+            value_type=np.ndarray
+        )
+        opts.add(
+            name='bf',
+            value_type=np.ndarray
+        )
+        opts.add(
+            name='bc',
+            value_type=np.ndarray
+        )
+        opts.add(
+            name='bo',
+            value_type=np.ndarray
+        )
+
+        return opts
+
+    def init_params(self):
+        opts = self.options
+        Wi = opts.get('Wi')
+        Wf = opts.get('Wf')
+        Wc = opts.get('Wc')
+        Wo = opts.get('Wo')
+        Ui = opts.get('Ui')
+        Uf = opts.get('Uf')
+        Uc = opts.get('Uc')
+        Uo = opts.get('Uo')
+        Vo = opts.get('Vo')
+        bi = opts.get('bi')
+        bf = opts.get('bf')
+        bc = opts.get('bc')
+        bo = opts.get('bo')
+        insize = opts.get('insize')
+        outsize = opts.get('outsize')
+
+        rng = np.random.RandomState(10913)
+
+        def make_shared_matrix(p):
+            if p is None:
+                p = np.asarray(
+                    rng.uniform(
+                        low=-1. / np.sqrt(insize),
+                        high=1. / np.sqrt(insize),
+                        size=(insize, outsize)
+                    ),
+                    dtype=theano.config.floatX
+                )
+            return theano.shared(value=p, borrow=True)
+
+        def make_shared_vec(p):
+            if p is None:
+                p = np.zeros(outsize, theano.config.floatX)
+            return theano.shared(value=p, borrow=True)
+
+        matrices = [make_shared_matrix(p)
+                    for p in [Wi, Wf, Wc, Wo, Ui, Uf, Uc, Uo, Vo]]
+        vectors = [make_shared_vec(p)
+                    for p in [bi, bf, bc, bo]]
+
+        return matrices + vectors
+
+    def apply(self, inputs):
+        x_t = inputs[0]
+        h_tm1 = inputs[1]
+        C_tm1 = inputs[2]
+        Wi = self.params[0]
+        Wf = self.params[1]
+        Wc = self.params[2]
+        Wo = self.params[3]
+        Ui = self.params[4]
+        Uf = self.params[5]
+        Uc = self.params[6]
+        Uo = self.params[7]
+        Vo = self.params[8]
+        bi = self.params[9]
+        bf = self.params[10]
+        bc = self.params[11]
+        bo = self.params[12]
+
+        it = T.tanh(x_t.dot(Wi) + h_tm1.dot(Ui) + bi)
+        _Ct = T.tanh(x_t.dot(Wc) + h_tm1.dot(Uc) + bc)
+        ft = T.tanh(x_t.dot(Wf) + h_tm1.dot(Uf) + bf)
+        Ct = it * _Ct + ft * C_tm1
+        ot = T.tanh(x_t.dot(Wo) + h_tm1.dot(Uo) + bo)
+        ht = ot * T.tanh(Ct)
+        return [ht, Ct]
+
+
 class RecurrentNeuralNetwork(Model):
     """A recurrent neural network.
     The model inputs will be:

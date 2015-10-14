@@ -11,7 +11,8 @@ from nnb.nn_model import (
     SoftmaxLayer,
     RecursiveNeuralNetwork,
     RecurrentNeuralNetwork,
-    SimpleRecurrency
+    SimpleRecurrency,
+    LSTMRecurrency
 )
 
 from nnb.rntn import RecursiveNeuralTensorNetwork
