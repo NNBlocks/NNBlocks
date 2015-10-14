@@ -81,15 +81,14 @@ class AdagradTrainer(Trainer):
         self.__train_with_grads = theano.function(params_grads, [],
                                                     updates=updates)
 
-    def train(self, inputs, expected_outputs):
+    def train(self, inputs):
         options = self.options
         model = options.get('model')
 
         grads = [np.zeros_like(param.get_value(borrow=True)) 
                 for param in model.params]
-        for inp, outp in zip(inputs, expected_outputs):
-            a = list(inp) + [outp]
-            grads_i = self.__get_grads(*a)
+        for inp in inputs:
+            grads_i = self.__get_grads(*inp)
             for g, gi in zip(grads, grads_i):
                 g += gi
 

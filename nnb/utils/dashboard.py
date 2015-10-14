@@ -9,7 +9,6 @@ class Dashboard:
         self.__acc_ax = self.__fig.add_subplot(211)
         self.__error_ax = self.__fig.add_subplot(212)
 
-        self.__model = model
         self.__acc_func = acc_func
         self.__cost_func = cost_func
 
@@ -26,6 +25,7 @@ class Dashboard:
         self.__fig.show()
         plt.pause(0.01)
         self.__datasets = {}
+        self.__feedforward = model.compile()
 
     def add_dataset(self, features, labels, name=None):
         if name is None:
@@ -47,7 +47,7 @@ class Dashboard:
             error_mean = 0
             acc_mean = 0
             for i in range(len(features)):
-                results = self.__model.feedforward(*features[i])
+                results = self.__feedforward(*features[i])
                 error_mean += self.__cost_func(
                     results,
                     labels[i]
@@ -79,6 +79,6 @@ class Dashboard:
         plt.pause(0.1)
 
     def save_pic(self, f):
-        self.__fig.saveFig(f)
+        self.__fig.savefig(f)
 
 
