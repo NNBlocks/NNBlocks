@@ -44,11 +44,6 @@ class TrainSupervisor(object):
             value_type=bool
         )
         opts.add(
-            name='eval_train',
-            value=False,
-            value_type=bool
-        )
-        opts.add(
             name='custom_procedures',
             value=[],
             value_type=list
@@ -57,7 +52,6 @@ class TrainSupervisor(object):
             name='batch_size',
             value_type=int
         )
-
         return opts
 
     def __init__(self, **kwargs):
@@ -83,9 +77,8 @@ class TrainSupervisor(object):
             total_cost += cost
 
         total_cost /= len(dataset)
-        self.last_eval_results = all_out
 
-        return total_cost
+        return all_out, total_cost
 
     def train(self):
         opts = self.options
@@ -97,20 +90,20 @@ class TrainSupervisor(object):
         patience = opts.get('max_no_improve')
         epochs_num = opts.get('epochs_num')
         permute = opts.get('permute_train')
-        eval_train = opts.get('eval_train') #nouse
         custom_procedures = opts.get('custom_procedures')
         batch_size = opts.get('batch_size')
+
+        descriptor = TrainingDescriptor()
 
         if batch_size is None:
             batch_size = len(dataset)
 
-        #TODO save random state and last iter if training stops
         rng = np.random.RandomState(1337)
         no_improve = 0
-        self.best_error = float('Inf')
-        self.best_params = []
+        descriptor.best_eval_error = float('Inf')
+        best_params = []
         for epoch in xrange(epochs_num):
-            self.epoch_num = epoch + 1
+            descriptor.epoch_num = epoch + 1
             print '~Epoch {0}~'.format(epoch + 1)
             init_time = time.time()
             if permute:
@@ -123,7 +116,7 @@ class TrainSupervisor(object):
                 fracs = iterations / 10
                 if fracs > 0 and i % fracs == 0:
                     frac = i / fracs
-                    print '\r[{0}{1}]'.format('-' * frac, ' ' * (9 - frac)),
+                    print '\r[{0}{1}]'.format('-' * frac, ' ' * (10 - frac)),
                     sys.stdout.flush()
             print ''
             took_time = time.time() - init_time
@@ -131,12 +124,13 @@ class TrainSupervisor(object):
             if eval_dataset is not None and \
                     eval_interval > 0 and (epoch + 1) % eval_interval == 0:
                 print 'Evaluating...'.format(epoch + 1)
-                error = self.eval(eval_dataset)
-                print 'Error = {0}'.format(error)
-                if error < self.best_error:
+                descriptor.last_eval_results, descriptor.last_eval_error = \
+                                                        self.eval(eval_dataset)
+                print 'Error = {0}'.format(descriptor.last_eval_error)
+                if descriptor.last_eval_error < descriptor.best_eval_error:
                     print 'New best!'
-                    self.best_error = error
-                    self.best_params = [p.get_value().copy()
+                    descriptor.best_eval_error = descriptor.last_eval_error
+                    best_params = [p.get_value().copy()
                                         for p in model.params]
                     no_improve = 0
                 else:
@@ -147,16 +141,26 @@ class TrainSupervisor(object):
                 for proc in custom_procedures:
                     if isinstance(proc, tuple):
                         if (epoch + 1) % proc[1] == 0:
-                            proc[0](self)
+                            proc[0](descriptor)
                     else:
-                        proc(self)
+                        proc(descriptor)
             except StopTraining:
                 break
 
-        print 'Finished! Best error: {0}'.format(self.best_error)
-        for p, new_p in zip(model.params, self.best_params):
+        print 'Finished! Best error: {0}'.format(descriptor.best_eval_error)
+        for p, new_p in zip(model.params, best_params):
             p.set_value(new_p)
 
 
 class StopTraining(Exception):
     pass
+
+class TrainingDescriptor(object):
+    """The epoch number"""
+    epoch_num = None
+    """The list of the last model's output when evaluating"""
+    last_eval_results = None
+    """The last evaluation error"""
+    last_eval_error = None
+    """The best evaluation error up to this point"""
+    best_eval_error = None
