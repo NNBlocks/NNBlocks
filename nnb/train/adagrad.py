@@ -76,7 +76,6 @@ class AdagradTrainer(Trainer):
 
         all_ = inputs + [expected_output]
 
-        self.__train = theano.function(all_, [], updates=updates)
         self.__get_grads = theano.function(all_, params_grads)
         self.__train_with_grads = theano.function(params_grads, [],
                                                     updates=updates)
