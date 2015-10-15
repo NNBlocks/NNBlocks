@@ -32,7 +32,16 @@ class AdagradTrainer(Trainer):
         expected_output = self.get_expected_output()
         cost = self.get_cost()
 
+        batch_size = T.iscalar()
+
         params_grads = [T.grad(cost=cost, wrt=param) for param in params]
+        grads_hist = [
+            theano.shared(
+                p.get_value() * np.asarray(0., dtype=theano.config.floatX)
+            ) for p in params
+        ]
+
+        grads_mean = [g / batch_size for g in grads_hist]
 
         adagrad_hist = options.get('hist')
         if adagrad_hist is None:
@@ -49,10 +58,10 @@ class AdagradTrainer(Trainer):
         ]
 
         new_hist = [ah + T.sqr(param_g)
-                        for ah, param_g in zip(adagrad_hist, params_grads)]
+                        for ah, param_g in zip(adagrad_hist, grads_mean)]
 
         new_grad = [grad / (1e-6 + T.sqrt(ah))
-                    for grad, ah in zip(params_grads, new_hist)]
+                    for grad, ah in zip(grads_mean, new_hist)]
 
         learning_rate = options.get('learning_rate')
 
@@ -63,6 +72,9 @@ class AdagradTrainer(Trainer):
 
         for hist, nh in zip(adagrad_hist, new_hist):
             updates[hist] = nh
+
+        for g in grads_hist:
+            updates[g] = T.zeros_like(g)
 
         adagrad_reset_update = [(hist, T.zeros_like(hist))
                                 for hist in adagrad_hist]
@@ -76,21 +88,18 @@ class AdagradTrainer(Trainer):
 
         all_ = inputs + [expected_output]
 
-        self.__get_grads = theano.function(all_, params_grads)
-        self.__train_with_grads = theano.function(params_grads, [],
+        update_grads = collections.OrderedDict()
+        for g, pg in zip(grads_hist, params_grads):
+            update_grads[g] = g + pg
+
+        self.__compute_grads = theano.function(all_, updates=update_grads)
+        self.__train_with_grads = theano.function([batch_size], [],
                                                     updates=updates)
 
     def train(self, inputs):
         options = self.options
         model = options.get('model')
 
-        grads = [np.zeros_like(param.get_value(borrow=True)) 
-                for param in model.params]
         for inp in inputs:
-            grads_i = self.__get_grads(*inp)
-            for g, gi in zip(grads, grads_i):
-                g += gi
-
-        for g in grads:
-            g /= len(inputs)
-        self.__train_with_grads(*grads)
+            self.__compute_grads(*inp)
+        self.__train_with_grads(len(inputs))
