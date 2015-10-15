@@ -1,3 +1,6 @@
+import nnb.utils as utils
+import nnb.cost as cost
+import nnb.train as train
 from nnb.model import (
     Model,
     InputLayer,
@@ -15,6 +18,3 @@ from nnb.nn_model import (
     LSTMRecurrency
 )
 
-import nnb.cost as cost
-import nnb.train as train
-import nnb.utils as utils
