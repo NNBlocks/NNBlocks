@@ -27,6 +27,8 @@ class AdagradTrainer(Trainer):
         model = options.get('model')
 
         params = model.params
+        if params is None or len(params) == 0:
+            raise ValueError("The model has no parameters to train")
 
         inputs, output = self.get_io()
         expected_output = self.get_expected_output()
