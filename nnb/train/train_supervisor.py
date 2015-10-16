@@ -108,7 +108,6 @@ class TrainSupervisor(object):
         if batch_size is None:
             batch_size = len(dataset)
 
-        rng = np.random.RandomState(1337)
         no_improve = 0
         descriptor.best_eval_error = float('Inf')
         best_params = []
@@ -117,7 +116,7 @@ class TrainSupervisor(object):
             print '~Epoch {0}~'.format(epoch + 1)
             init_time = time.time()
             if permute:
-                rng.shuffle(dataset)
+                nnb.rng.shuffle(dataset)
             iterations = len(dataset) / batch_size
             for i in xrange(iterations):
                 si = i * batch_size

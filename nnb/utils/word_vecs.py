@@ -1,5 +1,6 @@
 import numpy as np
 import theano
+import nnb
 
 def is_number(s):
     try:
@@ -31,7 +32,7 @@ class WordVecsHelper:
                     self.counter[token] = 0
                 self.counter[token] += 1
 
-    def create(self, dim, rng=np.random.RandomState(412), threshold=0):
+    def create(self, dim, threshold=0):
         word2index = {}
         word2index['NUMBER'] = 0
         word2index['YEAR'] = 1
@@ -51,7 +52,7 @@ class WordVecsHelper:
                 num_words += 1
 
 
-        word_vecs = rng.normal(
+        word_vecs = nnb.rng.normal(
             loc=0,
             scale=1.0,
             size=(num_words, dim)
@@ -94,7 +95,7 @@ class WordVecsHelper:
                 line_counts += 1
 
 
-        rng = np.random.RandomState(16927361)
+        nnb.rng = np.random.RandomState(16927361)
 
         #UNK
         line_counts += 1
@@ -102,7 +103,7 @@ class WordVecsHelper:
             shape=(line_counts, word_dim),
             dtype=theano.config.floatX
         )
-        word_vecs[0, :] = rng.normal(loc=0., scale=1., size=(1, word_dim)) / 10
+        word_vecs[0, :] = nnb.rng.normal(loc=0., scale=1., size=(1, word_dim)) / 10
 
         word2index = {}
         word2index['UNK'] = 0

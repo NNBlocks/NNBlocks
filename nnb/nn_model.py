@@ -42,7 +42,6 @@ class PerceptronLayer(Model):
         return ops
 
     def init_params(self):
-        rng = np.random.RandomState(1234)
         options = self.options
         insize = options.get('insize')
         outsize = options.get('outsize')
@@ -51,7 +50,7 @@ class PerceptronLayer(Model):
         W = options.get('W')
         if W is None:
             W = np.asarray(
-                rng.uniform(
+                nnb.rng.uniform(
                     low=-1/np.sqrt(insize),
                     high=1/np.sqrt(insize),
                     size=(insize, outsize)
@@ -122,14 +121,13 @@ class SoftmaxLayer(Model):
 
     def init_params(self):
         options = self.options
-        rng = np.random.RandomState(32523)
         in_dim = options.get('insize')
         out_dim = options.get('outsize')
 
         W_softmax = options.get('W_softmax')
         if W_softmax is None:
             W_softmax = np.asarray(
-                rng.uniform(
+                nnb.rng.uniform(
                     low=-1/np.sqrt(in_dim),
                     high=1/np.sqrt(in_dim),
                     size=(in_dim, out_dim)
@@ -145,7 +143,7 @@ class SoftmaxLayer(Model):
         b_softmax = options.get('b_softmax')
         if b_softmax is None:
             b_softmax = np.asarray(
-                rng.uniform(
+                nnb.rng.uniform(
                     low=0,
                     high=1,
                     size=(out_dim,)
@@ -317,11 +315,9 @@ class SimpleRecurrency(Model):
         b = self.options.get('b')
         W_h = self.options.get('W_h')
 
-        rng = np.random.RandomState(456)
-
         if W is None:
             W = np.asarray(
-                rng.uniform(
+                nnb.rng.uniform(
                     low=-1/np.sqrt(insize),
                     high=1/np.sqrt(insize),
                     size=(insize, outsize)
@@ -334,7 +330,7 @@ class SimpleRecurrency(Model):
 
         if W_h is None:
             W_h = np.asarray(
-                rng.uniform(
+                nnb.rng.uniform(
                     low=-1/np.sqrt(outsize),
                     high=1/np.sqrt(outsize),
                     size=(outsize, outsize)
@@ -445,12 +441,10 @@ class LSTMRecurrency(Model):
         insize = opts.get('insize')
         outsize = opts.get('outsize')
 
-        rng = np.random.RandomState(10913)
-
         def make_shared_matrix(p):
             if p is None:
                 p = np.asarray(
-                    rng.uniform(
+                    nnb.rng.uniform(
                         low=-1. / np.sqrt(insize),
                         high=1. / np.sqrt(insize),
                         size=(insize, outsize)
