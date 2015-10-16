@@ -52,6 +52,9 @@ class TrainSupervisor(object):
             name='batch_size',
             value_type=int
         )
+        opts.add(
+            name='eval_metric'
+        )
         return opts
 
     def __init__(self, **kwargs):
@@ -59,9 +62,12 @@ class TrainSupervisor(object):
         self.options.set_from_dict(kwargs)
         self.options.check()
         trainer = self.options.get('trainer')
+        cost_func = self.options.get('eval_metric')
+        if cost_func is None:
+            cost_func = trainer.options.get('cost_func')
         io = trainer.get_io()
         exp = trainer.get_expected_output()
-        cost = trainer.get_cost()
+        cost = cost_func(io[1], exp)
 
         inp = io[0] + [exp]
         outp = [io[1]] + [cost]
@@ -92,6 +98,10 @@ class TrainSupervisor(object):
         permute = opts.get('permute_train')
         custom_procedures = opts.get('custom_procedures')
         batch_size = opts.get('batch_size')
+
+        if eval_dataset is dataset:
+            import copy
+            eval_dataset = copy.deepcopy(dataset)
 
         descriptor = TrainingDescriptor()
 
@@ -135,8 +145,6 @@ class TrainSupervisor(object):
                     no_improve = 0
                 else:
                     no_improve += 1
-                    if no_improve == patience:
-                        break
             try:
                 for proc in custom_procedures:
                     if isinstance(proc, tuple):
@@ -145,6 +153,9 @@ class TrainSupervisor(object):
                     else:
                         proc(descriptor)
             except StopTraining:
+                break
+
+            if no_improve == patience:
                 break
 
         print 'Finished! Best error: {0}'.format(descriptor.best_eval_error)
