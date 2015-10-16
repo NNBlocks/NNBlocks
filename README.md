@@ -52,7 +52,7 @@ Here we just initialize some of our network's parameters, where
 * _word_vecs_ is all of our vocabulary vectors
 * _word_mats_ is all of our vocabulary matrices
 
-The rest of the parameters will be handled by the network's perceptron layer. We need to declare these parameters here because they don't fit in any of NNBlocks already implemented models. This sounds like a bad thing, but it's actually a big plus that you can plug in your own parameters and use them in the network easily.
+The rest of the parameters will be handled by NNBlocks' models. We need to declare these parameters here because they don't fit in any of NNBlocks already implemented models. This sounds like a bad thing, but it's actually a big plus that you can plug in your own parameters and use them in the network easily.
 
 ```python
 comp_tree = nnb.InputLayer(ndim=2, dtype='int32')
