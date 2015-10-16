@@ -139,7 +139,7 @@ class VerticalJoinModel(Model):
     def init_params(self):
         m1 = self.options.get('m1')
         m2 = self.options.get('m2')
-        return list(set(m1.params + m2.params))
+        return _uniq_list(m1.params + m2.params)
 
     def _get_inputs(self):
         m1 = self.options.get('m1')
@@ -155,17 +155,9 @@ class VerticalJoinModel(Model):
         except NotImplementedError:
             pass
 
-        with_duplicates = inp1 + inp2
-        without_duplicates = []
-        check_set = set()
+        inps = _uniq_list(inp1 + inp2)
 
-        for inp in with_duplicates:
-            if inp in check_set:
-                continue
-            check_set.add(inp)
-            without_duplicates.append(inp)
-
-        return without_duplicates
+        return inps
 
     def apply(self, prev):
         m1 = self.options.get('m1')
@@ -199,7 +191,7 @@ class HorizontalJoinModel(Model):
     def init_params(self):
         m1 = self.options.get('m1')
         m2 = self.options.get('m2')
-        return list(set(m1.params + m2.params))
+        return _uniq_list(m1.params + m2.params)
 
     def _get_inputs(self):
         m1 = self.options.get('m1')
@@ -215,17 +207,9 @@ class HorizontalJoinModel(Model):
         except NotImplementedError:
             pass
 
-        with_duplicates = inp1 + inp2
-        without_duplicates = []
-        check_set = set()
+        inps = _uniq_list(inp1 + inp2)
 
-        for inp in with_duplicates:
-            if inp in check_set:
-                continue
-            check_set.add(inp)
-            without_duplicates.append(inp)
-
-        return without_duplicates
+        return inps
 
     def apply(self, prev):
         m1 = self.options.get('m1')
@@ -303,3 +287,7 @@ class CustomModel(Model):
         if not isinstance(o, list):
             o = [o]
         return o
+
+def _uniq_list(l):
+    seen = set()
+    return [x for x in l if not (x in seen or seen.add(x))]
