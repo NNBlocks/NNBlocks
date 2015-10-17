@@ -483,11 +483,11 @@ class LSTMRecurrency(Model):
         bc = self.params[11]
         bo = self.params[12]
 
-        it = T.tanh(x_t.dot(Wi) + h_tm1.dot(Ui) + bi)
+        it = T.nnet.sigmoid(x_t.dot(Wi) + h_tm1.dot(Ui) + bi)
         _Ct = T.tanh(x_t.dot(Wc) + h_tm1.dot(Uc) + bc)
-        ft = T.tanh(x_t.dot(Wf) + h_tm1.dot(Uf) + bf)
+        ft = T.nnet.sigmoid(x_t.dot(Wf) + h_tm1.dot(Uf) + bf)
         Ct = it * _Ct + ft * C_tm1
-        ot = T.tanh(x_t.dot(Wo) + h_tm1.dot(Uo) + bo)
+        ot = T.nnet.sigmoid(x_t.dot(Wo) + h_tm1.dot(Uo) + bo)
         ht = ot * T.tanh(Ct)
         return [ht, Ct]
 
