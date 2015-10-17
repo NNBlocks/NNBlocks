@@ -2,9 +2,10 @@ import numpy as np
 
 rng = np.random.RandomState(1337)
 
-import utils as utils
-import cost as cost
-import train as train
+import activation
+import utils
+import cost
+import train
 from model import (
     Model,
     InputLayer,
