@@ -32,7 +32,7 @@ class Trainer(object):
     __expected_output = None
 
     def __init__(self, **kwargs):
-        options = self.get_options()
+        options = self.init_options()
         if not isinstance(options, utils.Options):
             raise TypeError("Options should be a NN.utils.Options instance." + \
                             " Got {0} instead".format(type(options)))
@@ -111,13 +111,13 @@ class Trainer(object):
         return cost
 
     @staticmethod
-    def get_options():
+    def init_options():
         return utils.Options()
 
     def setup(self):
         pass
 
-    def train(self, inputs, expected_outputs):
+    def train(self, inputs):
         raise NotImplementedError("The train method is not implemented in " + \
                                     "{0}".format(type(self)))
 

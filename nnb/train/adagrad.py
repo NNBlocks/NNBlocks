@@ -2,13 +2,14 @@ import theano.tensor as T
 import theano
 import numpy as np
 from nnb.train import Trainer
+from nnb.utils import Options
 
 class AdagradTrainer(Trainer):
     reset_history = None
 
     @staticmethod
-    def get_options():
-        ops = Trainer.get_options()
+    def init_options():
+        ops = Options()
         ops.add(
             name="hist",
             value_type=list,
@@ -100,7 +101,6 @@ class AdagradTrainer(Trainer):
 
     def train(self, inputs):
         options = self.options
-        model = options.get('model')
 
         for inp in inputs:
             self.__compute_grads(*inp)

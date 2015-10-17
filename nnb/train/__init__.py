@@ -1,4 +1,5 @@
-from nnb.train.trainer import Trainer
-from nnb.train.adagrad import AdagradTrainer
+from trainer import Trainer
+from adagrad import AdagradTrainer
+from sgd import SGDTrainer
 
-from nnb.train.train_supervisor import TrainSupervisor, StopTraining
+from train_supervisor import TrainSupervisor, StopTraining

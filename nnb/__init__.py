@@ -2,10 +2,10 @@ import numpy as np
 
 rng = np.random.RandomState(1337)
 
-import nnb.utils as utils
-import nnb.cost as cost
-import nnb.train as train
-from nnb.model import (
+import utils as utils
+import cost as cost
+import train as train
+from model import (
     Model,
     InputLayer,
     Picker,
@@ -13,7 +13,7 @@ from nnb.model import (
     CustomModel,
     SliceModel
 )
-from nnb.nn_model import (
+from nn_model import (
     PerceptronLayer,
     SoftmaxLayer,
     RecursiveNeuralNetwork,
