@@ -55,6 +55,11 @@ class TrainSupervisor(object):
         opts.add(
             name='eval_metric'
         )
+        opts.add(
+            name='plot_cost',
+            value_type=bool,
+            value=False
+        )
         return opts
 
     def __init__(self, **kwargs):
@@ -73,6 +78,30 @@ class TrainSupervisor(object):
         outp = [io[1]] + [cost]
 
         self.__out_and_cost = theano.function(inp, outp)
+
+        eval_dataset = self.options.get('eval_dataset')
+        dataset = self.options.get('dataset')
+
+        if eval_dataset is dataset:
+            import copy
+            eval_dataset = copy.deepcopy(dataset)
+            self.options.set('eval_dataset', eval_dataset)
+
+        plot_cost = self.options.get('plot_cost')
+
+        if plot_cost == True:
+            if eval_dataset is None:
+                raise ValueError("Can't plot the cost function without an " +
+                                "evaluation dataset")
+            import nnb.utils.plot_procedure as plot
+            __get_cost = theano.function([io[1], exp], cost)
+            def get_cost(last_eval_results):
+                accum_cost = 0
+                for r, er in zip(last_eval_results, eval_dataset):
+                    accum_cost += __get_cost(r, er[-1])
+                return accum_cost / len(eval_dataset)
+            plot_func = plot.plot_line(fn=get_cost, title="Cost")
+            self.options.get('custom_procedures').append(plot_func)
 
     def eval(self, dataset):
         total_cost = 0.
@@ -98,10 +127,6 @@ class TrainSupervisor(object):
         permute = opts.get('permute_train')
         custom_procedures = opts.get('custom_procedures')
         batch_size = opts.get('batch_size')
-
-        if eval_dataset is dataset:
-            import copy
-            eval_dataset = copy.deepcopy(dataset)
 
         descriptor = TrainingDescriptor()
 
