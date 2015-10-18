@@ -36,7 +36,7 @@ class plot_line(object):
         self._ax.relim()
         self._ax.autoscale_view()
 
-        plt.tight_layout()
+        self._figure.canvas.draw()
         plt.pause(0.0000000001)
 
     def get_data(self):
