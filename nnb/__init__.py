@@ -19,6 +19,6 @@ from nn_model import (
     SoftmaxLayer,
     RecursiveNeuralNetwork,
     RecurrentNeuralNetwork,
-    SimpleRecurrency,
-    LSTMRecurrency
+    SimpleRecurrence,
+    LSTMRecurrence
 )

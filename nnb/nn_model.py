@@ -262,8 +262,8 @@ class RecursiveNeuralNetwork(Model):
         return h
 
 
-class SimpleRecurrency(Model):
-    """A simple recurrency for a RecurrentNeuralNetwork
+class SimpleRecurrence(Model):
+    """A simple recurrence for a RecurrentNeuralNetwork
     """
     @staticmethod
     def init_options():
@@ -354,7 +354,7 @@ class SimpleRecurrency(Model):
         m = h_tm1.dot(W_h)
         return [self.options.get('activation_func')(z + m)]
 
-class LSTMRecurrency(Model):
+class LSTMRecurrence(Model):
     @staticmethod
     def init_options():
         opts = utils.Options()
@@ -506,7 +506,7 @@ class RecurrentNeuralNetwork(Model):
         ops.add(
             name='model',
             value_type=Model,
-            description="Model to be used for the recurrency."
+            description="Model to be used for the recurrence."
         )
 
         ops.add(
@@ -546,12 +546,12 @@ class RecurrentNeuralNetwork(Model):
             if h0 is None:
                 h0 = np.zeros(shape=(outsize,), dtype=theano.config.floatX)
             h0 = [theano.shared(name='h0', value=h0, borrow=True)]
-            model = SimpleRecurrency(insize=insize, outsize=outsize)
+            model = SimpleRecurrence(insize=insize, outsize=outsize)
             self.options.set('model', model)
         else:
             if h0 is None:
                 raise ValueError("The option 'h0' should be set if you are " +
-                                "setting your own model for recurrency.")
+                                "setting your own model for recurrence.")
             if not isinstance(h0, list):
                 h0 = [theano.shared(name='h0', value=h0, borrow=True)]
             else:
