@@ -56,7 +56,7 @@ class TrainSupervisor(object):
             name='eval_metric'
         )
         opts.add(
-            name='plot_cost',
+            name='plot',
             value_type=bool,
             value=False
         )
@@ -87,11 +87,11 @@ class TrainSupervisor(object):
             eval_dataset = copy.deepcopy(dataset)
             self.options.set('eval_dataset', eval_dataset)
 
-        plot_cost = self.options.get('plot_cost')
+        plot_cost = self.options.get('plot')
 
         if plot_cost == True:
             if eval_dataset is None:
-                raise ValueError("Can't plot the cost function without an " +
+                raise ValueError("Can't plot the metric function without an " +
                                 "evaluation dataset")
             import nnb.utils.plot_procedure as plot
             __get_cost = theano.function([io[1], exp], cost)
