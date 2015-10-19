@@ -337,9 +337,9 @@ class SimpleRecurrency(Model):
                 ),
                 dtype=theano.config.floatX
             )
-        W = theano.shared(value=W, borrow=True)
-        b = theano.shared(value=b, borrow=True)
-        W_h = theano.shared(value=W_h, borrow=True)
+        W = theano.shared(value=W, borrow=True, name='W')
+        b = theano.shared(value=b, borrow=True, name='b')
+        W_h = theano.shared(value=W_h, borrow=True, name='W_h')
 
         return [W, b, W_h]
 
