@@ -285,7 +285,10 @@ class CustomModel(Model):
         a = prev + self.params
         o = fn(*a)
         if not isinstance(o, list):
-            o = [o]
+            if isinstance(o,tuple):
+                o = list(o)
+            else:
+                o = [o]
         return o
 
 def _uniq_list(l):
