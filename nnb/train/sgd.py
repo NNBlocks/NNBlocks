@@ -13,11 +13,17 @@ class SGDTrainer(Trainer):
             value_type=float,
             description="Learning rate used for the training"
         )
+        opts.add(
+            name="momentum",
+            value=0.,
+            value_type=float
+        )
         return opts
     def setup(self):
         opts = self.options
         model = opts.get('model')
         lr = opts.get('learning_rate')
+        momentum = opts.get('momentum')
         params = model.params
 
         if len(params) == 0:
@@ -26,6 +32,12 @@ class SGDTrainer(Trainer):
         inputs, output = self.get_io()
         cost = self.get_cost()
         expected_output = self.get_expected_output()
+
+        velocity = [
+            theano.shared(
+                p.get_value() * np.asarray(0., dtype=theano.config.floatX)
+            ) for p in params
+        ]
 
         grads_hist = [
             theano.shared(
@@ -47,8 +59,9 @@ class SGDTrainer(Trainer):
         grads_mean = [g / batch_size for g in grads_hist]
 
         updates = []
-        for param, grad in zip (params, grads_mean):
-            updates.append((param, param - lr * grad))
+        for param, grad, v in zip (params, grads_mean, velocity):
+            updates.append((v, momentum * v + lr * grad))
+            updates.append((param, param - v))
         for grad in grads_hist:
             updates.append((grad, T.zeros_like(grad)))
 
