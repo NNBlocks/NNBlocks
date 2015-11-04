@@ -53,7 +53,11 @@ class TrainSupervisor(object):
             value_type=int
         )
         opts.add(
-            name='eval_metric'
+            name='eval_model'
+        )
+        opts.add(
+            name='eval_model_is_cost',
+            value=False
         )
         opts.add(
             name='plot',
@@ -67,53 +71,58 @@ class TrainSupervisor(object):
         self.options.set_from_dict(kwargs)
         self.options.check()
         trainer = self.options.get('trainer')
-        cost_func = self.options.get('eval_metric')
-        if cost_func is None:
-            cost_func = trainer.options.get('cost_func')
-        io = trainer.get_io()
-        exp = trainer.get_expected_output()
-        cost = cost_func(io[1], exp)
+        eval_model = self.options.get('eval_model')
 
-        inp = io[0] + [exp]
-        outp = [io[1]] + [cost]
+        if eval_model is None:
+            eval_model = trainer.options.get('model')
+            self.options.set('eval_model_is_cost', True)
 
-        self.__out_and_cost = theano.function(inp, outp)
+        io = eval_model.get_io()
+        inp = io[0]
+        outp = io[1]
+
+        self.__eval = theano.function(inp, outp)
 
         eval_dataset = self.options.get('eval_dataset')
         dataset = self.options.get('dataset')
 
+        #This avoids some problems with the shuffle and custom procedures.
+        #For example, the user might want to do some evaluation himself with a
+        #non-shuffled copy of the outputs. This would generate bugs really hard
+        #to detect.
         if eval_dataset is dataset:
             import copy
             eval_dataset = copy.deepcopy(dataset)
             self.options.set('eval_dataset', eval_dataset)
 
         plot_cost = self.options.get('plot')
+        eval_model_is_cost = self.options.get('eval_model_is_cost')
 
         if plot_cost == True:
             if eval_dataset is None:
                 raise ValueError("Can't plot the metric function without an " +
                                 "evaluation dataset")
+            if not eval_model_is_cost:
+                raise ValueError("Can't plot a cost line if the eval_model is" +
+                                " not a cost. To set the eval_model as a cost" +
+                                ", set the eval_model_is_cost parameter to " +
+                                "True")
             import nnb.utils.plot_procedure as plot
-            __get_cost = theano.function([io[1], exp], cost)
+
             def get_cost(last_eval_results):
-                accum_cost = 0
-                for r, er in zip(last_eval_results, eval_dataset):
-                    accum_cost += __get_cost(r, er[-1])
-                return accum_cost / len(eval_dataset)
+                accum_cost = sum(last_eval_results)
+                return accum_cost / len(last_eval_results)
+
             plot_func = plot.plot_line(fn=get_cost, title="Cost")
             self.options.get('custom_procedures').append(plot_func)
 
     def eval(self, dataset):
-        total_cost = 0.
         all_out = []
         for ex in dataset:
-            out, cost = self.__out_and_cost(*ex)
-            all_out.append(out)
-            total_cost += cost
+            cost = self.__eval(*ex)
+            all_out.append(cost)
 
-        total_cost /= len(dataset)
-
-        return all_out, total_cost
+        return all_out
 
     def train(self):
         opts = self.options
@@ -127,6 +136,7 @@ class TrainSupervisor(object):
         permute = opts.get('permute_train')
         custom_procedures = opts.get('custom_procedures')
         batch_size = opts.get('batch_size')
+        eval_model_is_cost = opts.get('eval_model_is_cost')
 
         descriptor = TrainingDescriptor()
 
@@ -158,17 +168,21 @@ class TrainSupervisor(object):
             if eval_dataset is not None and \
                     eval_interval > 0 and (epoch + 1) % eval_interval == 0:
                 print 'Evaluating...'.format(epoch + 1)
-                descriptor.last_eval_results, descriptor.last_eval_error = \
-                                                        self.eval(eval_dataset)
-                print 'Error = {0}'.format(descriptor.last_eval_error)
-                if descriptor.last_eval_error < descriptor.best_eval_error:
-                    print 'New best!'
-                    descriptor.best_eval_error = descriptor.last_eval_error
-                    best_params = [p.get_value().copy()
-                                        for p in model.params]
-                    no_improve = 0
-                else:
-                    no_improve += 1
+                descriptor.last_eval_results = self.eval(eval_dataset)
+                if eval_model_is_cost:
+                    descriptor.last_eval_error = \
+                        sum(descriptor.last_eval_results)
+                    descriptor.last_eval_error /= \
+                        len(descriptor.last_eval_results)
+                    print 'Error = {0}'.format(descriptor.last_eval_error)
+                    if descriptor.last_eval_error < descriptor.best_eval_error:
+                        print 'New best!'
+                        descriptor.best_eval_error = descriptor.last_eval_error
+                        best_params = [p.get_value().copy()
+                                            for p in model.params]
+                        no_improve = 0
+                    else:
+                        no_improve += 1
             try:
                 for proc in custom_procedures:
                     if isinstance(proc, tuple):
@@ -182,9 +196,11 @@ class TrainSupervisor(object):
             if no_improve == patience:
                 break
 
-        print 'Finished! Best error: {0}'.format(descriptor.best_eval_error)
-        for p, new_p in zip(model.params, best_params):
-            p.set_value(new_p)
+        print 'Finished!'
+        if eval_model_is_cost:
+            print 'Best error: {0}'.format(descriptor.best_eval_error)
+            for p, new_p in zip(model.params, best_params):
+                p.set_value(new_p)
 
 
 class StopTraining(Exception):

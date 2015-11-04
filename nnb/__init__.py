@@ -1,11 +1,7 @@
 import numpy as np
-
 rng = np.random.RandomState(1337)
 
-import activation
 import utils
-import cost
-import train
 from model import (
     Model,
     InputLayer,
@@ -14,6 +10,10 @@ from model import (
     CustomModel,
     SliceModel
 )
+
+import activation
+import cost
+import train
 from nn_model import (
     PerceptronLayer,
     SoftmaxLayer,

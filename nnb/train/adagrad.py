@@ -32,7 +32,6 @@ class AdagradTrainer(Trainer):
             raise ValueError("The model has no parameters to train")
 
         inputs, output = self.get_io()
-        expected_output = self.get_expected_output()
         cost = self.get_cost()
 
         batch_size = T.iscalar()
@@ -89,13 +88,11 @@ class AdagradTrainer(Trainer):
         )
 
 
-        all_ = inputs + [expected_output]
-
         update_grads = collections.OrderedDict()
         for g, pg in zip(grads_hist, params_grads):
             update_grads[g] = g + pg
 
-        self.__compute_grads = theano.function(all_, updates=update_grads)
+        self.__compute_grads = theano.function(inputs, updates=update_grads)
         self.__train_with_grads = theano.function([batch_size], [],
                                                     updates=updates)
 
