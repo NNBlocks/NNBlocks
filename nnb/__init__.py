@@ -21,5 +21,6 @@ from nn_model import (
     RecurrentNeuralNetwork,
     SimpleRecurrence,
     LSTMRecurrence,
-    ConvolutionalNeuralNetwork
+    ConvolutionalLayer,
+    MaxPoolingLayer
 )

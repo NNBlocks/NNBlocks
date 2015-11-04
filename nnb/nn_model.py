@@ -591,7 +591,7 @@ class RecurrentNeuralNetwork(Model):
 
         return h
 
-class ConvolutionalNeuralNetwork(Model):
+class ConvolutionalLayer(Model):
     @staticmethod
     def init_options():
         opts = utils.Options()
@@ -657,3 +657,7 @@ class ConvolutionalNeuralNetwork(Model):
         output = act(conv + b.dimshuffle('x', 0, 'x', 'x'))
 
         return [output.dimshuffle(1, 2, 3).flatten(ndim=2).dimshuffle(1, 0)]
+
+class MaxPoolingLayer(Model):
+    def apply(self, prev):
+        return [T.max(prev[0], axis=1)]
