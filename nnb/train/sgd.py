@@ -31,7 +31,6 @@ class SGDTrainer(Trainer):
 
         inputs, output = self.get_io()
         cost = self.get_cost()
-        expected_output = self.get_expected_output()
 
         velocity = [
             theano.shared(
@@ -51,8 +50,7 @@ class SGDTrainer(Trainer):
         for hist, grad in zip(grads_hist, grads):
             grads_update.append((hist, hist + grad))
 
-        self.__update_grads = theano.function(inputs + [expected_output], [],
-                                                updates=grads_update)
+        self.__update_grads = theano.function(inputs, [], updates=grads_update)
 
         batch_size = T.iscalar()
 

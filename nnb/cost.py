@@ -1,5 +1,6 @@
 import theano.tensor as T
 import theano
+import nnb
 
 def cross_entropy(p, y):
     if p.ndim != y.ndim:
@@ -18,8 +19,11 @@ def cross_entropy(p, y):
         raise NotImplemented("cross_entropy can only be performed on ndim up " +
                             "to 3")
 
-def cross_entropy_summed(p, y):
-    return -T.sum((y * T.log(p)))
+class CrossEntropyError(nnb.Model):
+    def apply(self, prev):
+        if len(prev) != 2:
+            raise ValueError("Error models can only treat exactly 2 inputs")
+        return [cross_entropy(*prev)]
 
 def mean_square_error(p, y):
     if p.ndim == 0 and y.ndim == 0:
@@ -32,3 +36,9 @@ def mean_square_error(p, y):
         error_str = "Invalid dimensions for mean square error: {0} and {1}."
         error_str = error_str.format(p.ndim, y.ndim)
         raise ValueError(error_str)
+
+class MeanSquareError(nnb.Model):
+    def apply(self, prev):
+        if len(prev) != 2:
+            raise ValueError("Error models can only treat exactly 2 inputs")
+        return [mean_square_error(*prev)]

@@ -1,6 +1,5 @@
 import nnb
 import nnb.utils as utils
-import nnb.cost
 import theano.tensor as T
 
 def _reg_dict(d):
@@ -51,10 +50,6 @@ class Trainer(object):
             value_type=[float, dict, list],
             value=0.
         )
-        options.add(
-            name='cost_func',
-            value=nnb.cost.mean_square_error
-        )
 
         options.set_from_dict(kwargs)
         options.check()
@@ -68,30 +63,13 @@ class Trainer(object):
         self.__io = self.options.get('model').get_io()
         return self.__io
 
-    def get_expected_output(self):
-        if self.__expected_output is not None:
-            return self.__expected_output
-
-        inputs, output = self.get_io()
-        t = T.TensorType(output.dtype, (False,) * output.ndim)
-        expected_output = t('expected_output')
-
-        self.__expected_output = expected_output
-
-        return expected_output
-
-
     def get_cost(self):
         options = self.options
         model = options.get('model')
-        cost_func = options.get('cost_func')
         L1_reg = options.get('L1_reg')
         L2_reg = options.get('L2_reg')
 
         inputs, output = self.get_io()
-        expected_output = self.get_expected_output()
-
-        cost = cost_func(output, expected_output)
 
         L1_reg = _reg_opt(L1_reg, model)
         L2_reg = _reg_opt(L2_reg, model)
@@ -105,10 +83,10 @@ class Trainer(object):
             if param in L2_reg:
                 reg2 = L2_reg[param]
 
-            cost += abs(param).sum() * reg1
-            cost += T.sqr(param).sum() * reg2
+            output += abs(param).sum() * reg1
+            output += T.sqr(param).sum() * reg2
 
-        return cost
+        return output
 
     @staticmethod
     def init_options():
