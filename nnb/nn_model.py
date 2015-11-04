@@ -590,3 +590,70 @@ class RecurrentNeuralNetwork(Model):
             h = [h]
 
         return h
+
+class ConvolutionalNeuralNetwork(Model):
+    @staticmethod
+    def init_options():
+        opts = utils.Options()
+        opts.add(
+            name='stride',
+            value_type=int,
+            value=1
+        )
+        opts.add(
+            name='window',
+            value_type=int,
+            required=True
+        )
+        opts.add(
+            name='insize',
+            value_type=int
+        )
+        opts.add(
+            name='outsize',
+            value_type=int
+        )
+        opts.add(
+            name='activation_func',
+            value=nnb.activation.sigmoid
+        )
+
+        return opts
+
+    def init_params(self):
+        opts = self.options
+        insize = opts.get('insize')
+        outsize = opts.get('outsize')
+        window = opts.get('window')
+
+        W = np.asarray(nnb.rng.uniform(
+            low=-1 / np.sqrt(insize),
+            high=1 / np.sqrt(insize),
+            size=(outsize, insize, window)
+        ), dtype=theano.config.floatX)
+        W = theano.shared(value=W, name='W', borrow=True)
+
+        b = np.asarray(np.zeros(shape=(outsize,)), dtype=theano.config.floatX)
+        b = theano.shared(value=b, name='b', borrow=True)
+
+        return [W, b]
+
+    def apply(self, prev):
+        W = self.params[0]
+        b = self.params[1]
+        stride = self.options.get('stride')
+        window = self.options.get('window')
+        insize = self.options.get('insize')
+        outsize = self.options.get('outsize')
+
+        conv = T.nnet.conv2d(
+            prev[0].dimshuffle('x', 'x', 0, 1),
+            W.dimshuffle(0, 'x', 1, 2),
+            filter_shape=(outsize, 1, insize, window),
+            image_shape=(1, 1, None, insize),
+            subsample=(1, stride)
+        )
+        act = self.options.get('activation_func')
+        output = act(conv + b.dimshuffle('x', 0, 'x', 'x'))
+
+        return [output.dimshuffle(1, 2, 3).flatten(ndim=2).dimshuffle(1, 0)]

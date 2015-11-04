@@ -20,5 +20,6 @@ from nn_model import (
     RecursiveNeuralNetwork,
     RecurrentNeuralNetwork,
     SimpleRecurrence,
-    LSTMRecurrence
+    LSTMRecurrence,
+    ConvolutionalNeuralNetwork
 )
