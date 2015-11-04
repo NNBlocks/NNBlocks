@@ -1,8 +1,22 @@
+__all__ = [
+    'cross_entropy_error',
+    'CrossEntropyError',
+    'mean_square_error',
+    'MeanSquareError',
+    'negative_log_likelihood_error',
+    'NegativeLogLikelihoodError'
+]
+
 import theano.tensor as T
 import theano
 import nnb
 
-def cross_entropy(p, y):
+
+def _check_inputs(prev):
+    if len(prev) != 2:
+        raise ValueError("Error models can only treat exactly 2 inputs")
+
+def cross_entropy_error(p, y):
     if p.ndim != y.ndim:
         raise ValueError("Cross entropy can only be performed in outputs and" +
                         " expected outputs with the same dimensions")
@@ -21,9 +35,8 @@ def cross_entropy(p, y):
 
 class CrossEntropyError(nnb.Model):
     def apply(self, prev):
-        if len(prev) != 2:
-            raise ValueError("Error models can only treat exactly 2 inputs")
-        return [cross_entropy(*prev)]
+        _check_inputs(prev)
+        return [cross_entropy_error(*prev)]
 
 def mean_square_error(p, y):
     if p.ndim == 0 and y.ndim == 0:
@@ -39,6 +52,21 @@ def mean_square_error(p, y):
 
 class MeanSquareError(nnb.Model):
     def apply(self, prev):
-        if len(prev) != 2:
-            raise ValueError("Error models can only treat exactly 2 inputs")
+        _check_inputs(prev)
         return [mean_square_error(*prev)]
+
+def negative_log_likelihood_error(p, y):
+    if p.ndim == 1 and y.ndim == 0:
+        return -T.log(p[y])
+    elif p.ndim == 2 and y.ndim == 1:
+        return -T.mean(T.log(p)[T.arange(y.shape[0]), y])
+    else:
+        error_str = "Invalid dimensions for negative log likelihood: {0} and" +\
+                    "{1}."
+        error_str = error_str.format(p.ndim, y.ndim)
+        raise ValueError(error_str)
+
+class NegativeLogLikelihoodError(nnb.Model):
+    def apply(self, prev):
+        _check_inputs(prev)
+        return [negative_log_likelihood_error(*prev)]
