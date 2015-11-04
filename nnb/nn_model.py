@@ -8,6 +8,39 @@ import theano.tensor as T
 
 class PerceptronLayer(Model):
     """A Perceptron layer
+    This Model implements a Perceptron Layer for Neural Networks. The horizontal
+    joining of several of these layers forms a Multilayer Perceptron.
+    This Model will take a single input x and output
+    activation_func(x.dot(W) + b).
+
+    :param insize: Required int. The input size. If the input of this model is
+        a vector, insize will be the vector's length. If the input is a matrix,
+        insize will be the length of each row.
+    :param outsize: Required int. The output size. This can be thought as the
+        layer's number of neurons. If the input is a vector, outsize is the
+        length of the output vector. If the input is a matrix, outsize is the
+        length of each row of the output matrix.
+    :param activation_func: Optional callable object. This is the activation
+        function used in weighted average of the input vector. This function
+        should use only theano operations. Default is nnb.activation.sigmoid
+    :param W: Optional numpy ndarray with ndim=2. If set, the weights of this
+        layer are not randomly initialized. Instead they are set to this
+        parameter's value.
+    :param b: Optional numpy ndarray with ndim=1. If set, the bias vector of
+        this layer are not initialized with zeros. Instead they are set to this
+        parameter's value.
+
+    Inputs:
+        A single input x with x.ndim=1 or x.ndim=2. x.shape[-1] should be equal
+            to the insize parameter
+
+    Outputs:
+        A single output y with y.ndim=x.ndim and y.shape[-1] equal to the
+            outsize parameter.
+
+    Tunable Parameters:
+        W - Weight matrix
+        b - Bias vector
     """
 
     @staticmethod
@@ -84,17 +117,40 @@ class PerceptronLayer(Model):
 
 class SoftmaxLayer(Model):
     """A Softmax layer
+    This Model is very similar to the PerceptronLayer Model. The only big
+    difference is that the activation_func is set to a softmax function. Another
+    difference is that the bias vector is initialized differently.
+
+    :param insize: Required int. The input size. If the input of this model is
+        a vector, insize will be the vector's length. If the input is a matrix,
+        insize will be the length of each row.
+    :param outsize: Required int. The output size. This can be thought as the
+        layer's number of neurons. If the input is a vector, outsize is the
+        length of the output vector. If the input is a matrix, outsize is the
+        length of each row of the output matrix.
+    :param W_softmax: Optional numpy ndarray with ndim=2. If set, the weights of
+        this layer are not randomly initialized. Instead they are set to this
+        parameter's value.
+    :param b: Optional numpy ndarray with ndim=1. If set, the bias vector of
+        this layer are not initialized with zeros. Instead they are set to this
+        parameter's value.
+
+    Inputs:
+        A single input x with x.ndim=1 or x.ndim=2. x.shape[-1] should be equal
+            to the insize parameter
+
+    Outputs:
+        A single output y with y.ndim=x.ndim and y.shape[-1] equal to the
+            outsize parameter.
+
+    Tunable Parameters:
+        W_softmax - Weight matrix
+        b_softmax - Bias vector
     """
 
     @staticmethod
     def init_options():
         ops = utils.Options()
-        ops.add(
-            name="model_supports_batch",
-            value=True,
-            readonly=True,
-            description="""Tells if this model supports batch feedforward"""
-        )
         ops.add(
             name="insize",
             required=True,
@@ -167,10 +223,77 @@ class SoftmaxLayer(Model):
 
 
 class RecursiveNeuralNetwork(Model):
-    """
-    A Recursive Neural Network. 
-    Each composition in the recursive layer is made with the model passed by
-    options.
+    """A Recursive Neural Network.
+    Each composition in the recursive NN is made with the model passed by
+    parameter. This makes this model very flexible.
+    Of important detail about this model is that every output of the composition
+    model should have the shape as its inputs, since they are used recursively.
+
+    :param comp_model: Optional Model. Composition Model to be used throught the
+        tree. This Model can have any number of inputs/outputs. If the
+        comp_model has 2 outputs, it should also have 2 inputs of the same
+        shapes. This is necessary to perform the recursive steps. If no
+        comp_model is set, the default composition is a single PerceptronLayer
+        applied to the concatenated childrens' vectors.
+    :param insize: Optional int. This parameter is only used when no comp_model
+        is set. In this case the insize parameter is required and used to
+        instantiate the default composition Model (a PerceptronLayer).
+
+    Inputs:
+        The first input is a matrix that defines the composition tree to be
+            followed. This matrix specifies the composition tree in the
+            following way:
+                All nodes of the tree are numbered. The leafs of the tree are
+                numbered from left to right, starting from 0. Then all the
+                internal nodes are numbered sequentialy in any order. We will
+                call these nodes numbers as nodes ids. We will also reference
+                the number of leafs as leafs_nr from now on.
+                Each column of the tree matrix represents an internal node of
+                the tree, where the first column represents the node with id
+                leafs_nr, the second column represents the node with id
+                leafs_nr+1 and so on.
+                Each element of each column vector of the tree matrix specifies
+                a child of that column. This element specifies the child using
+                the child's node id. This node id can be from a leaf node or
+                from another internal node.
+                Let's have a look at an example:
+                comp_tree = [
+                    [1, 2],
+                    [4, 3],
+                    [0, 5]
+                ]
+                This tree matrix with 4 leaf nodes can be visualized as:
+
+                      6
+                     / \ 
+                    /   5
+                   /   / \ 
+                  /   4   \ 
+                 /   / \   \ 
+                0   1   2   3
+
+            This Model can also have other inputs. These inputs will be treated
+            as leaf nodes of the tree. The basic requirement for these inputs is
+            that the shape[0] property of every input should be equal. This way
+            they are all passed to the composition model in the right way.
+            For example, imagine a composition tree that composes words
+            representions into phrases representations. If every word is
+            represented by a matrix and a vector (just like the MV-RNN model
+            from Socher et al. [2013]), then the inputs of this Model should be
+            a matrix and a 3DTensor, both with shape[0] equal to the sentence
+            length.
+
+    Outputs:
+        This Model outputs all nodes outputs, including the leaf nodes. For the
+            MV-RNN example, this Model would have 2 outputs. One output would be
+            a matrix representing every vector representation of the tree. The
+            other output would be a 3DTensor representing every matrix
+            representation of the tree.
+
+    Tunable Parameters:
+        The tunable parameters of this Model are just the comp_model's tunable
+            parameters. If no comp_model is given, the tunable parameters are
+            the same as the PerceptronLayer
     """
 
     @staticmethod

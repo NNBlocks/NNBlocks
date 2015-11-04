@@ -505,7 +505,7 @@ class Picker(Model):
     Outputs:
         A single output being the choices sliced using the input
 
-    Tunnable Parameters:
+    Tunable Parameters:
         choices - The ndarray passed as parameter when initializing the model.
     """
     @staticmethod
@@ -589,7 +589,7 @@ class CustomModel(Model):
     Outputs:
         The fn's outputs, when given this Model's inputs
 
-    Tunnable Parameters:
+    Tunable Parameters:
         Any parameter passed in the params option when this Model was
             initialized. These parameters will be nameless.
     """
