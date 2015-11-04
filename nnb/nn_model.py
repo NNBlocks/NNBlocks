@@ -647,10 +647,10 @@ class ConvolutionalNeuralNetwork(Model):
         outsize = self.options.get('outsize')
 
         conv = T.nnet.conv2d(
-            prev[0].dimshuffle('x', 'x', 0, 1),
+            prev[0].dimshuffle('x', 'x', 1, 0),
             W.dimshuffle(0, 'x', 1, 2),
             filter_shape=(outsize, 1, insize, window),
-            image_shape=(1, 1, None, insize),
+            image_shape=(1, 1, insize, None),
             subsample=(1, stride)
         )
         act = self.options.get('activation_func')
