@@ -15,7 +15,7 @@ class Model(object):
     """
 
     params = None
-    """List of theano's shared variables. These are the Model's tunnable
+    """List of theano's shared variables. These are the Model's tunable
     parameters.
     """
 
