@@ -517,6 +517,65 @@ class SimpleRecurrence(Model, Recurrence):
         return [self.options.get('activation_func')(z + m)]
 
 class LSTMRecurrence(Model, Recurrence):
+    """The LSTM recurrence Model
+    This Model implements the Long Short-Term Memory. For more information on
+    this kind of recurrence model, please read
+    http://deeplearning.cs.cmu.edu/pdfs/Hochreiter97_lstm.pdf
+    This Model only operates on vectors.
+    Every gate for the LSTM has two weight matrices. One that operates on the
+    current input and other that operates on the previous output. One can tell
+    the difference between them by their names. A parameter starting with W
+    operates on the current input, while a parameter starting with U operates on
+    the previous output.
+
+    :param insize: The length of the input vectors
+    :param outsize: Optional length of the output vectors. If not specified,
+        the Model assumes outsize==insize
+    :param Wi: The weight matrix for the input gate. This matrix has shape
+        (insize, outsize). If not specified, the matrix is randomly initialized
+    :param Wf: The weight matrix for the forget gate. This matrix has shape
+        (insize, outsize). If not specified, the matrix is randomly initialized
+    :param Wc: The weight matrix for the internal representation. This matrix
+        has shape (insize, outsize). If not specified, the matrix is randomly
+        initialized
+    :param Wo: The weight matrix for the output gate. This matrix has shape
+        (insize, outsize). If not specified, the matrix is randomly initialized
+    :param Ui: The weight matrix for the input gate. This matrix has shape
+        (outsize, outsize). If not specified, the matrix is randomly initialized
+    :param Uf: The weight matrix for the forget gate. This matrix has shape
+        (outsize, outsize). If not specified, the matrix is randomly initialized
+    :param Uc: The weight matrix for the internal representation. This matrix
+        has shape (outsize, outsize). If not specified, the matrix is randomly
+        initialized
+    :param Uo: The weight matrix for the output gate. This matrix has shape
+        (outsize, outsize). If not specified, the matrix is randomly initialized
+    :param Vo: The weight matrix for the output gate that operates on the
+        internal state. This matrix has shape (outsize, outsize). If not
+        specified, the matrix is randomly initialized
+    :param bi: Bias vector for the input gate, with shape (outsize,). If not
+        specified, the vector is initialized with zeros.
+    :param bf: Bias vector for the forget gate, with shape (outsize,). If not
+        specified, the vector is initialized with zeros.
+    :param bc: Bias vector for the internal representation, with shape
+        (outsize,). If not specified, the vector is initialized with zeros.
+    :param bo: Bias vector for the output gate, with shape (outsize,). If not
+        specified, the vector is initialized with zeros.
+
+    Inputs:
+        Three vectors. The first with shape (insize,) is the current input. The
+            second with shape (outsize,) is the previous output from the
+            recurrence. The third with shape (outsize,) is the previous internal
+            state from the recurrence.
+
+    Outputs:
+        Two vectors, both with shape (outsize,). The first is the output from
+        the LSTM cell. The second is the internal state of the LSTM cell.
+
+    Tunable Parameters:
+        (For explanations of what each tunable parameter is, read this Model's
+        parameters list)
+        [Wi, Wf, Wc, Wo, Ui, Uf, Uc, Uo, Vo, bi, bf, bc, bo]
+    """
     @staticmethod
     def init_options():
         opts = utils.Options()
