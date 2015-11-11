@@ -553,7 +553,11 @@ class ConcatenationModel(Model):
 class CustomModel(Model):
     """Model that uses an arbitrary function to process its inputs
     This Model is the easiest way to create a Model. It takes a function and
-    uses it on its inputs
+    uses it on its inputs.
+    An important detail is that the function should only build more of the
+    theano's computation graph, i.e. should not use for loops to process the
+    inputs directly and should not use functions that are not ready to handle
+    theano variables.
 
     :param params: Optional list of custom tunable parameters. These can be
         simply numpy ndarrays or theano shared variables. Any ndarrays in the

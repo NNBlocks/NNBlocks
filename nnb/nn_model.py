@@ -384,9 +384,42 @@ class RecursiveNeuralNetwork(Model):
 
         return h
 
+class Recurrence(object):
+    """An abstract class to Models that implement a recurrence function.
+    This is useful to let the RecurrentNeuralNetwork know what initial inputs
+    the recurrence model is expecting
+    """
 
-class SimpleRecurrence(Model):
-    """A simple recurrence for a RecurrentNeuralNetwork
+    def get_h0(self):
+        """This method lets the RecurrentNeuralNetwork know what the initial
+        inputs are.
+
+        :returns: A theano shared variable or a list of theano shared variables
+        """
+        raise NotImplemented("Abstract method not implemented")
+
+
+class SimpleRecurrence(Model, Recurrence):
+    """A simple recurrence for a RecurrentNeuralNetwork.
+    This Recurrence Model passes the last output and the current input in a
+    Perceptron Layer, summing them up after.
+
+    :param insize: The size of the vectors that will be used as input
+    :param outsize: The size of the output vector
+    :param W: Weight matrix for the current input vector. This matrix has shape
+        (insize, outsize). If not specified, the matrix will be randomly
+        initialized
+    :param b: Vector of shape (outsize,) representing the bias vector. If not
+        specified, the vector will be initialized with zeros
+    :param W_h: The weight matrix for the last output. This matrix has shape
+        (outsize, outsize). If not specified, the matrix will be randomly
+        initialized.
+
+    Inputs:
+        Two vectors. The first with shape (insize,) is the current input vector.
+            The second vector, with shape (outsize,) is the last output vector.
+    Outputs:
+        A single vector with shape (outsize,)
     """
     @staticmethod
     def init_options():
@@ -430,6 +463,12 @@ class SimpleRecurrence(Model):
         )
 
         return ops
+
+    def get_h0(self):
+        insize = self.options.get('insize')
+        h0 = np.asarray(np.zeros(shape=(insize,)), dtype=theano.config.floatX)
+        h0 = theano.shared(value=h0, name='h0')
+        return h0
 
     def init_params(self):
         insize = self.options.get('insize')
@@ -477,7 +516,7 @@ class SimpleRecurrence(Model):
         m = h_tm1.dot(W_h)
         return [self.options.get('activation_func')(z + m)]
 
-class LSTMRecurrence(Model):
+class LSTMRecurrence(Model, Recurrence):
     @staticmethod
     def init_options():
         opts = utils.Options()
@@ -488,7 +527,6 @@ class LSTMRecurrence(Model):
         )
         opts.add(
             name='outsize',
-            required=True,
             value_type=int
         )
         opts.add(
@@ -546,6 +584,15 @@ class LSTMRecurrence(Model):
 
         return opts
 
+    def get_h0(self):
+        insize = self.options.get('insize')
+        outsize = self.options.get('outsize')
+        h0 = np.asarray(np.zeros(shape=(outsize,)), dtype=theano.config.floatX)
+        h0 = theano.shared(value=h0, name='h0')
+        C0 = np.asarray(np.zeros(shape=(outsize,)), dtype=theano.config.floatX)
+        C0 = theano.shared(value=C0, name='C0')
+        return [h0, C0]
+
     def init_params(self):
         opts = self.options
         Wi = opts.get('Wi')
@@ -564,13 +611,17 @@ class LSTMRecurrence(Model):
         insize = opts.get('insize')
         outsize = opts.get('outsize')
 
-        def make_shared_matrix(p):
+        if outsize is None:
+            outsize = insize
+            opts.set('outsize', outsize)
+
+        def make_shared_matrix(p, ins, outs):
             if p is None:
                 p = np.asarray(
                     nnb.rng.uniform(
-                        low=-1. / np.sqrt(insize),
-                        high=1. / np.sqrt(insize),
-                        size=(insize, outsize)
+                        low=-1. / np.sqrt(ins),
+                        high=1. / np.sqrt(ins),
+                        size=(ins, outs)
                     ),
                     dtype=theano.config.floatX
                 )
@@ -581,8 +632,10 @@ class LSTMRecurrence(Model):
                 p = np.zeros(outsize, theano.config.floatX)
             return theano.shared(value=p, borrow=True)
 
-        matrices = [make_shared_matrix(p)
-                    for p in [Wi, Wf, Wc, Wo, Ui, Uf, Uc, Uo, Vo]]
+        matrices = [make_shared_matrix(p, insize, outsize)
+                    for p in [Wi, Wf, Wc, Wo]]
+        matrices += [make_shared_matrix(p, outsize, outsize)
+                    for p in [Ui, Uf, Uc, Uo, Vo]]
         vectors = [make_shared_vec(p)
                     for p in [bi, bf, bc, bo]]
 
@@ -610,7 +663,7 @@ class LSTMRecurrence(Model):
         _Ct = T.tanh(x_t.dot(Wc) + h_tm1.dot(Uc) + bc)
         ft = T.nnet.sigmoid(x_t.dot(Wf) + h_tm1.dot(Uf) + bf)
         Ct = it * _Ct + ft * C_tm1
-        ot = T.nnet.sigmoid(x_t.dot(Wo) + h_tm1.dot(Uo) + bo)
+        ot = T.nnet.sigmoid(x_t.dot(Wo) + Ct.dot(Vo) + h_tm1.dot(Uo) + bo)
         ht = ot * T.tanh(Ct)
         return [ht, Ct]
 
@@ -673,11 +726,22 @@ class RecurrentNeuralNetwork(Model):
             self.options.set('model', model)
         else:
             if h0 is None:
-                raise ValueError("The option 'h0' should be set if you are " +
-                                "setting your own model for recurrence.")
-            if not isinstance(h0, list):
-                h0 = [theano.shared(name='h0', value=h0, borrow=True)]
+                if not isinstance(model, Recurrence):
+                    raise ValueError("Unable to infer the initial output " +
+                                    "value for the recurrence model. Either " +
+                                    "specify the 'h0' parameter or make the " +
+                                    "Model extend the Recurrence class, " +
+                                    "implementing the 'get_h0(self)' method")
+                h0 = model.get_h0()
+
+                if not isinstance(h0, list):
+                    h0 = [h0]
+
+                return h0 + model.params
             else:
+                if not isinstance(h0, list):
+                    h0 = [theano.shared(value=h0, name='h0', borrow=True)]
+
                 h0_n = []
                 for i in range(len(h0)):
                     h0_n.append(
