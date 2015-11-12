@@ -420,6 +420,11 @@ class SimpleRecurrence(Model, Recurrence):
             The second vector, with shape (outsize,) is the last output vector.
     Outputs:
         A single vector with shape (outsize,)
+
+    Tunable Parameters:
+        W - Weight matrix for the current input
+        b - Bias vector
+        W_h - Weight matrix for the last output
     """
     @staticmethod
     def init_options():
@@ -728,11 +733,59 @@ class LSTMRecurrence(Model, Recurrence):
 
 
 class RecurrentNeuralNetwork(Model):
-    """A recurrent neural network.
-    The model inputs will be:
-        0-n: x_t
-        rest: h_tm1
-    where n is the number of inputs per time t
+    """A Recurrent Neural Network
+    The purpose of this Model is to apply another Model's 'apply' method
+    recurrently on this Model's inputs.
+    This Model assumes that the first dimension of its inputs represents the
+    passing of time. For example, if this Model has a tensor x as input, x[0]
+    represents the input at time 1, x[1] the input at time 2 and so on. For this
+    Model to work, every 'shape[0]' of each input must be the same.
+    A Model that serves as the Recurrence Model for the RecurrentNeuralNetwork
+    can extend the nnb.Recurrence abstract class. This way the
+    RecurrentNeuralNetwork can extract the output for time 0. If this can't be
+    detected at runtime, the RecurrentNeuralNetwork will request the 'h0'
+    parameter to be passed to the constructor.
+    The order of the inputs passed to the Recurrence Model is:
+        1 - The current time inputs, in order they are given to the
+            RecurrentNeuralNetwork.
+        2 - The previous time outputs, int the same order the Recurrence Model
+            outputs them.
+
+    :param model: The Recurrence Model to be used.
+        So the RecurrentNeuralNetwork can detect the h0 for the model, this
+        Recurrence Model should extend the nnb.Recurrence class.
+        If the 'model' parameter is not specified, the RecurrentNeuralNetwork
+        will need the 'insize' and 'outsize' parameters so it can build a
+        SimpleRecurrence to be used as the Recurrence Model.
+        This Recurrence Model should be able to handle the
+        RecurrentNeuralNetwork inputs and the Recurrence Model previous outputs
+    :param h0: The output for time 0, i.e. the first value to be used in the
+        recurrence. This parameter can be a numpy ndarray or a list of ndarrays.
+        This parameter is only needed if the Recurrence Model used doesn't
+        extend the nnb.Recurrence class.
+    :param insize: Same as the 'insize' for the nnb.SimpleRecurrence Model. This
+        is only used if no 'model' parameter is specified. In this case this
+        parameter is required.
+    :param outsize: Same as the 'outsize' for the nnb.SimpleRecurrence Model.
+        This is only used if no 'model' parameter is specified. In this case
+        this parameter is required.
+
+    Inputs:
+        Any number of inputs with any number of dimensions > 0, as long as the
+            length of the first dimension of all inputs are equal. This is
+            required because the first dimension of all inputs are understanded
+            as the passing of time.
+
+    Outputs:
+        The same outputs as the Recurrence Model with an extra dimension. This
+            extra dimension puts all outputs from the Recurrence Model in the
+            same tensor
+
+    Tunable Parameters:
+        h0 - The first values used for the recurrence, in the same order they
+            are given to the RecurrentNeuralNetwork, either by the 'h0'
+            parameter or the 'get_h0(self)' method from the Recurrence Model.
+        The rest of the parameters are the same as the Recurrence Model.
     """
     @staticmethod
     def init_options():
