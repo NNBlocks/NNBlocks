@@ -4,6 +4,8 @@ NNBlocks is a framework to build and train any kind of exotic neural networks ar
 * Easy to expand with new model blocks
 * Full of auxiliary tools for your neural network
 
+Please refer to the [User Guide](https://github.com/NNBlocks/NNBlocks/wiki/User-Guide) for more information on instalation and usage.
+
 ###Example:
 Let's say you have 3 input vectors as matrix lines. This will be the NN input.
 You want to pass it through a multilayer perceptron, then a recurrent neural network and  finnaly get the last vector of the result. i.e.:
