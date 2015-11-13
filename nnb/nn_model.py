@@ -243,8 +243,9 @@ class RecursiveNeuralNetwork(Model):
     """A Recursive Neural Network.
     Each composition in the recursive NN is made with the model passed by
     parameter. This makes this model very flexible.
-    Of important detail about this model is that every output of the composition
-    model should have the shape as its inputs, since they are used recursively.
+    One important detail about this model is that every output of the
+    composition model should have the same shape as its inputs, since they are
+    used recursively.
 
     :param comp_model: Optional Model. Composition Model to be used throught the
         tree. This Model can have any number of inputs/outputs. If the
