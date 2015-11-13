@@ -891,6 +891,39 @@ class RecurrentNeuralNetwork(Model):
         return h
 
 class ConvolutionalLayer(Model):
+    """A simple convolutional layer for a neural network
+    This layer implements a convolutional layer that operates on word vectors.
+    To implement the convolution neural network described in
+    http://emnlp2014.org/papers/pdf/EMNLP2014181.pdf one just needs to define
+    some number of instances of this layer, each with a different window size.
+    This Model uses the very optimized convolution implemented by theano.
+
+    :param window: The window size. If the convolutional layer is analyzing
+        n-grams of size n, this parameter should be set to n. This is a
+        required parameter
+    :param insize: The size of each word vector. This is a required parameter
+    :param outsize: The number of filters to be aplied. This will make the
+        output vectors to have this size. This is a required parameter
+    :param stride: The 'step size' when performing each filter. The default
+        value for this parameter is 1
+    :param activation_func: The activation function to be used. The default
+        value for this parameter is nnb.activation.sigmoid
+    :param W: The matrix of weights to be used. If not specified the matrix will
+        be initialized randomly
+    :param b: The bias vector. If not specified the vector will be initialized
+        with zeros
+
+    Inputs:
+        A matrix, where each line is a word vector of size 'insize'
+
+    Outputs:
+        A matrix where each line is a vector of size 'outsize'. Each column is
+            the result of a filter applied to 'window' word vectors
+
+    Tunable Parameters:
+        W - Matrix of weights
+        b - Bias vector
+    """
     @staticmethod
     def init_options():
         opts = utils.Options()
@@ -906,15 +939,25 @@ class ConvolutionalLayer(Model):
         )
         opts.add(
             name='insize',
-            value_type=int
+            value_type=int,
+            required=True
         )
         opts.add(
             name='outsize',
-            value_type=int
+            value_type=int,
+            required=True
         )
         opts.add(
             name='activation_func',
             value=nnb.activation.sigmoid
+        )
+        opts.add(
+            name='W',
+            value_type=np.ndarray
+        )
+        opts.add(
+            name='b',
+            value_type=np.ndarray
         )
 
         return opts
@@ -958,5 +1001,15 @@ class ConvolutionalLayer(Model):
         return [output.dimshuffle(1, 2, 3).flatten(ndim=2).dimshuffle(1, 0)]
 
 class MaxPoolingLayer(Model):
+    """A max pooling layer
+    This layer performs the T.max(x, axis=1) operation.
+    
+    Inputs:
+        A matrix
+
+    Outputs:
+        A vector. Each element of the vector is the max of each column of the
+            input matrix
+    """
     def apply(self, prev):
         return [T.max(prev[0], axis=1)]
