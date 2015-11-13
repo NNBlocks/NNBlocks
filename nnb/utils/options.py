@@ -21,7 +21,7 @@ class Options(object):
     """Class made to handle models' options.
 
     This class handles options and do validation checks on them. Normaly an
-    instance of this class will be given by a model's get_options method, since
+    instance of this class will be given by a model's init_options method, since
     the model is responsable for setting the validation settings of the options.
 
     """
