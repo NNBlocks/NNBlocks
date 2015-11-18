@@ -545,7 +545,8 @@ class ConcatenationModel(Model):
     """Model that concatenate its inputs.
     This model follows the same syntax as theano.tensor.concatenate
 
-    :param axis: Required int. Inputs will be joines along this axis.
+    :param axis: Optional int. Inputs will be joined along this axis. The
+        default value is 0.
 
     Inputs:
         Any number of inputs of any shape, as long as they can be concatenated
