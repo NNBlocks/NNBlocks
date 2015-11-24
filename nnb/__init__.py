@@ -18,6 +18,7 @@
 import numpy as np
 rng = np.random.RandomState(1337)
 
+import init
 import utils
 from model import (
     Model,
@@ -27,7 +28,6 @@ from model import (
     CustomModel,
     SliceModel
 )
-
 import activation
 import cost
 import train
