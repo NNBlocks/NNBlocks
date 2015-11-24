@@ -38,13 +38,13 @@ class PerceptronLayer(Model):
         length of the output vector. If the input is a matrix, outsize is the
         length of each row of the output matrix.
     :param activation_func: Optional callable object. This is the activation
-        function used in weighted average of the input vector. This function
+        function used in the weighted average of the input vector. This function
         should use only theano operations. Default is nnb.activation.sigmoid
     :param W: Optional numpy ndarray with ndim=2. If set, the weights of this
         layer are not randomly initialized. Instead they are set to this
         parameter's value.
     :param b: Optional numpy ndarray with ndim=1. If set, the bias vector of
-        this layer are not initialized with zeros. Instead they are set to this
+        this layer is not initialized with zeros. Instead it is set to this
         parameter's value.
 
     Inputs:
