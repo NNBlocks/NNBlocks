@@ -126,13 +126,14 @@ class XavierInitializer(Initializer):
         if len(shape) <= 1:
             raise ValueError("The XavierInitializer only handles tensors with" +
                             " ndim >= 2")
-        r = nnb.rng.normal(loc=0., scale=1. / (shape[-1] + shape[-2]))
+        r = nnb.rng.normal(loc=0., scale=1. / (shape[-1] + shape[-2]),
+                            size=shape)
         r *= self.factor
         r = np.asarray(r, dtype=theano.config.floatX)
 
         return r
 
-class EyeInitializer(Initialize):
+class EyeInitializer(Initializer):
     """Initializes a matrix with an identity matrix plus a Gaussian Noise drawn
     from the Xavier initialization function
     """
@@ -151,7 +152,7 @@ class EyeInitializer(Initialize):
         The shape parameter for this Initializer should have ndim=2 and
         shape[0]==shape[1]
         """
-        if shape.ndim != 2 or shape[0] != shape[1]:
+        if len(shape) != 2 or shape[0] != shape[1]:
             raise ValueError("The shape for the EyeInitializer should have " +
                             "ndim=2 and shape[0]==shape[1]")
         r = np.eye(shape[0], shape[1])
