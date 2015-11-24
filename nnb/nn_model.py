@@ -20,6 +20,7 @@ import warnings
 import numpy as np
 import nnb
 import nnb.utils as utils
+import nnb.init as init
 import theano
 import theano.tensor as T
 
@@ -40,8 +41,10 @@ class PerceptronLayer(Model):
     :param activation_func: Optional callable object. This is the activation
         function used in the weighted average of the input vector. This function
         should use only theano operations. Default is nnb.activation.sigmoid
+    :param init: The weight initializer for the layer weights. Default is
+        XavierInitializer.
     :param W: Optional numpy ndarray with ndim=2. If set, the weights of this
-        layer are not randomly initialized. Instead they are set to this
+        layer are not initialized with `init`. Instead they are set to this
         parameter's value.
     :param b: Optional numpy ndarray with ndim=1. If set, the bias vector of
         this layer is not initialized with zeros. Instead it is set to this
@@ -76,6 +79,11 @@ class PerceptronLayer(Model):
             required=True
         )
         ops.add(
+            name="init",
+            value_type=init.Initializer,
+            value=init.XavierInitializer()
+        )
+        ops.add(
             name='W',
             description="Matrix of the network's weights, with dimensions "
                         "equal to (insize, outsize)"
@@ -95,18 +103,11 @@ class PerceptronLayer(Model):
         options = self.options
         insize = options.get('insize')
         outsize = options.get('outsize')
-
+        init = options.get('init')
 
         W = options.get('W')
         if W is None:
-            W = np.asarray(
-                nnb.rng.uniform(
-                    low=-1/np.sqrt(insize),
-                    high=1/np.sqrt(insize),
-                    size=(insize, outsize)
-                ),
-                dtype=theano.config.floatX
-            )
+            W = init((insize, outsize))
         W = theano.shared(
             value=W,
             name='W',
@@ -135,8 +136,7 @@ class PerceptronLayer(Model):
 class SoftmaxLayer(Model):
     """A Softmax layer
     This Model is very similar to the PerceptronLayer Model. The only big
-    difference is that the activation_func is set to a softmax function. Another
-    difference is that the bias vector is initialized differently.
+    difference is that the activation_func is set to a softmax function.
 
     :param insize: Required int. The input size. If the input of this model is
         a vector, insize will be the vector's length. If the input is a matrix,
@@ -145,8 +145,10 @@ class SoftmaxLayer(Model):
         layer's number of neurons. If the input is a vector, outsize is the
         length of the output vector. If the input is a matrix, outsize is the
         length of each row of the output matrix.
+    :param init: The weight initializer for the layer weights. Default is
+        XavierInitializer.
     :param W_softmax: Optional numpy ndarray with ndim=2. If set, the weights of
-        this layer are not randomly initialized. Instead they are set to this
+        this layer are not initialized with `init`. Instead they are set to this
         parameter's value.
     :param b: Optional numpy ndarray with ndim=1. If set, the bias vector of
         this layer are not initialized with zeros. Instead they are set to this
@@ -181,6 +183,11 @@ class SoftmaxLayer(Model):
             description="""Number of classes this model is trying to predict"""
         )
         ops.add(
+            name="init",
+            value_type=init.Initializer,
+            value=init.XavierInitializer()
+        )
+        ops.add(
             name="W_softmax",
             value_type=np.ndarray,
             description="""The matrix used for the softmax layer"""
@@ -196,17 +203,11 @@ class SoftmaxLayer(Model):
         options = self.options
         in_dim = options.get('insize')
         out_dim = options.get('outsize')
+        init = options.get('init')
 
         W_softmax = options.get('W_softmax')
         if W_softmax is None:
-            W_softmax = np.asarray(
-                nnb.rng.uniform(
-                    low=-1/np.sqrt(in_dim),
-                    high=1/np.sqrt(in_dim),
-                    size=(in_dim, out_dim)
-                ),
-                dtype=theano.config.floatX
-            )
+            W_softmax = init((in_dim, out_dim))
         W_softmax = theano.shared(
             value=W_softmax,
             name='W_softmax',
@@ -215,14 +216,7 @@ class SoftmaxLayer(Model):
 
         b_softmax = options.get('b_softmax')
         if b_softmax is None:
-            b_softmax = np.asarray(
-                nnb.rng.uniform(
-                    low=0,
-                    high=1,
-                    size=(out_dim,)
-                ),
-                dtype=theano.config.floatX
-            )
+            b_softmax = np.zeros(outsize, dtype=theano.config.floatX)
         b_softmax = theano.shared(
             value=b_softmax,
             name='b_softmax',
