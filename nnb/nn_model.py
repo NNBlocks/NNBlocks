@@ -1019,14 +1019,52 @@ class ConvolutionalLayer(Model):
 
 class MaxPoolingLayer(Model):
     """A max pooling layer
-    This layer performs the T.max(x, axis=1) operation.
-    
+    This layer performs a max pooling layer over a matrix of word vectors. This
+    layer is not supposed to work like the max pooling layer for images, because
+    one can't set a window size for the height. This is supposed to work on
+    entire vectors always.
+
+    :param window: The number of rows to analize in each max operation. This
+        parameter is required
+    :param ignore_border: If set to True, the last vectors when sliding the
+        window will be ignored if they don't fit in a full `window` size. The
+        default value for this parameter is False.
+
     Inputs:
         A matrix
 
     Outputs:
-        A vector. Each element of the vector is the max of each column of the
-            input matrix
+        A matrix. Each row is the vector obtained by the max pooling over a
+            window.
     """
+    @staticmethod
+    def init_options():
+        opts = nnb.utils.Options()
+        opts.add(
+            name='window',
+            value_type=int,
+            required=True
+        )
+        opts.add(
+            name='ignore_border',
+            value_type=bool,
+            value=False
+        )
+        return opts
+
     def apply(self, prev):
-        return [T.max(prev[0], axis=1)]
+        window = self.options.get('window')
+        ignore_border = self.options.get('ignore_border')
+
+        def one_step(ind, inp):
+            x = inp[ind * window:(ind + 1) * window]
+            return T.max(x, axis=0)
+
+        steps = prev[0].shape[0] / window
+        if not ignore_border:
+            cond = T.lt(steps * window, prev[0].shape[0])
+            steps = T.switch(cond, steps + 1, steps)
+
+        out, updates = theano.scan(fn=one_step, non_sequences=[prev[0]],
+                                sequences=[T.arange(steps)])
+        return [out]
