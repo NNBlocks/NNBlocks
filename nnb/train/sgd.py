@@ -28,7 +28,6 @@ class SGDTrainer(Trainer):
             name="learning_rate",
             value=0.1,
             value_type=float,
-            description="Learning rate used for the training"
         )
         opts.add(
             name="momentum",

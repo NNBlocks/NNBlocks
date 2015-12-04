@@ -29,14 +29,12 @@ class AdagradTrainer(Trainer):
         ops = Options()
         ops.add(
             name="hist",
-            value_type=list,
-            description="Starting adagrad history"
+            value_type=list
         )
         ops.add(
             name="learning_rate",
             value=0.1,
-            value_type=float,
-            description="Learning rate used for the training"
+            value_type=float
         )
         return ops
 

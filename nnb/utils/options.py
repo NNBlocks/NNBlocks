@@ -34,7 +34,7 @@ class Options(object):
     #pylint: disable-msg=too-many-arguments
     def add(self, name, value=None,
             required=False, readonly=False,
-            value_type=object, description=None):
+            value_type=object):
         """Adds an option.
 
         Args:
@@ -52,8 +52,6 @@ class Options(object):
                 set to an iterable of types, the isinstance function will be
                 used for all types specified and the check will succeed if any
                 of the isinstance function calls returns True.
-            description (Optional[str]): String containing a small description
-                of what this option does.
 
         """
         if name in self.__ops:
@@ -63,7 +61,6 @@ class Options(object):
             'required': required,
             'readonly': readonly,
             'value_type': value_type,
-            'description': description
         }
         self.__ops[name] = new_op
 

@@ -68,13 +68,11 @@ class PerceptronLayer(Model):
         ops = utils.Options()
         ops.add(
             name="insize",
-            description="The size of the input of the layer.",
             value_type=int,
             required=True
         )
         ops.add(
             name="outsize",
-            description="The size of the output of the layer.",
             value_type=int,
             required=True
         )
@@ -85,12 +83,9 @@ class PerceptronLayer(Model):
         )
         ops.add(
             name='W',
-            description="Matrix of the network's weights, with dimensions "
-                        "equal to (insize, outsize)"
         )
         ops.add(
             name='b',
-            description="Vector of the network's biases, with length outsize"
         )
         ops.add(
             name='activation_func',
@@ -174,13 +169,11 @@ class SoftmaxLayer(Model):
             name="insize",
             required=True,
             value_type=int,
-            description="""Input vectors' length"""
         )
         ops.add(
             name="outsize",
             required=True,
             value_type=int,
-            description="""Number of classes this model is trying to predict"""
         )
         ops.add(
             name="init",
@@ -190,12 +183,10 @@ class SoftmaxLayer(Model):
         ops.add(
             name="W_softmax",
             value_type=np.ndarray,
-            description="""The matrix used for the softmax layer"""
         )
         ops.add(
             name="b_softmax",
             value_type=np.ndarray,
-            description="""Bias vector used for the softmax layer"""
         )
         return ops
 
@@ -313,7 +304,6 @@ class RecursiveNeuralNetwork(Model):
         ops = utils.Options()
         ops.add(
             name="comp_model",
-            description="The composition model to be used in the tree",
             value_type=Model
         )
         ops.add(
@@ -448,32 +438,27 @@ class SimpleRecurrence(Model, Recurrence):
             name='insize',
             value_type=int,
             required=True,
-            description="Size of each input of the network."
         )
 
         ops.add(
             name='outsize',
             value_type=int,
             required=True,
-            description="Size of each output of the network."
         )
 
         ops.add(
             name='W',
             value_type=np.ndarray,
-            description="Weight matrix for x, the features vector."
         )
 
         ops.add(
             name='b',
             value_type=np.ndarray,
-            description="Bias vector for the transformation."
         )
 
         ops.add(
             name='W_h',
             value_type=np.ndarray,
-            description="Weight matrix for h_t-1, the memory input."
         )
 
         ops.add(
@@ -802,28 +787,21 @@ class RecurrentNeuralNetwork(Model):
         ops.add(
             name='model',
             value_type=Model,
-            description="Model to be used for the recurrence."
         )
 
         ops.add(
             name='h0',
             value_type=[np.ndarray, list],
-            description="Initial 'memory' input."
         )
 
         ops.add(
             name='insize',
             value_type=int,
-            description="Size of each input vector of the model. This is " +
-                        "only used if the option 'model' is not set."
         )
 
         ops.add(
             name='outsize',
             value_type=int,
-            description="Size of each output vector of the model. This is " +
-                        "required so the initial memory input h0 can be " +
-                        "initialized."
         )
 
         return ops
