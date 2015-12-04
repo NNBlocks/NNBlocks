@@ -216,7 +216,7 @@ class SoftmaxLayer(Model):
 
         b_softmax = options.get('b_softmax')
         if b_softmax is None:
-            b_softmax = np.zeros(outsize, dtype=theano.config.floatX)
+            b_softmax = np.zeros(out_dim, dtype=theano.config.floatX)
         b_softmax = theano.shared(
             value=b_softmax,
             name='b_softmax',
@@ -420,12 +420,14 @@ class SimpleRecurrence(Model, Recurrence):
     :param outsize: The size of the output vector
     :param W: Weight matrix for the current input vector. This matrix has shape
         (insize, outsize). If not specified, the matrix will be randomly
-        initialized
+        initialized with the `init` parameter.
     :param b: Vector of shape (outsize,) representing the bias vector. If not
         specified, the vector will be initialized with zeros
     :param W_h: The weight matrix for the last output. This matrix has shape
         (outsize, outsize). If not specified, the matrix will be randomly
-        initialized.
+        initialized with the `init` parameter.
+    :param init: The weight initializer used for the tunable parameters. The
+        default initializer is a XavierInitializer.
 
     Inputs:
         Two vectors. The first with shape (insize,) is the current input vector.
@@ -478,6 +480,11 @@ class SimpleRecurrence(Model, Recurrence):
             name='activation_func',
             value=T.nnet.sigmoid
         )
+        ops.add(
+            name='init',
+            value_type=init.Initializer,
+            value=init.XavierInitializer()
+        )
 
         return ops
 
@@ -493,29 +500,17 @@ class SimpleRecurrence(Model, Recurrence):
         W = self.options.get('W')
         b = self.options.get('b')
         W_h = self.options.get('W_h')
+        init = self.options.get('init')
 
         if W is None:
-            W = np.asarray(
-                nnb.rng.uniform(
-                    low=-1/np.sqrt(insize),
-                    high=1/np.sqrt(insize),
-                    size=(insize, outsize)
-                ),
-                dtype=theano.config.floatX
-            )
+            W = init((insize, outsize))
 
         if b is None:
             b = np.zeros(shape=(outsize,), dtype=theano.config.floatX)
 
         if W_h is None:
-            W_h = np.asarray(
-                nnb.rng.uniform(
-                    low=-1/np.sqrt(outsize),
-                    high=1/np.sqrt(outsize),
-                    size=(outsize, outsize)
-                ),
-                dtype=theano.config.floatX
-            )
+            W_h = init((outsize, outsize))
+
         W = theano.shared(value=W, borrow=True, name='W')
         b = theano.shared(value=b, borrow=True, name='b')
         W_h = theano.shared(value=W_h, borrow=True, name='W_h')
@@ -548,6 +543,8 @@ class LSTMRecurrence(Model, Recurrence):
     :param insize: The length of the input vectors
     :param outsize: Optional length of the output vectors. If not specified,
         the Model assumes outsize==insize
+    :param init: The Initializer used to initialize all the weights. The default
+        initializer is a XavierInitializer.
     :param Wi: The weight matrix for the input gate. This matrix has shape
         (insize, outsize). If not specified, the matrix is randomly initialized
     :param Wf: The weight matrix for the forget gate. This matrix has shape
@@ -604,6 +601,11 @@ class LSTMRecurrence(Model, Recurrence):
         opts.add(
             name='outsize',
             value_type=int
+        )
+        opts.add(
+            name='init',
+            value_type=init.Initializer,
+            value=init.XavierInitializer()
         )
         opts.add(
             name='Wi',
@@ -686,6 +688,7 @@ class LSTMRecurrence(Model, Recurrence):
         bo = opts.get('bo')
         insize = opts.get('insize')
         outsize = opts.get('outsize')
+        init = opts.get('init')
 
         if outsize is None:
             outsize = insize
@@ -693,14 +696,7 @@ class LSTMRecurrence(Model, Recurrence):
 
         def make_shared_matrix(p, ins, outs):
             if p is None:
-                p = np.asarray(
-                    nnb.rng.uniform(
-                        low=-1. / np.sqrt(ins),
-                        high=1. / np.sqrt(ins),
-                        size=(ins, outs)
-                    ),
-                    dtype=theano.config.floatX
-                )
+                p = init((ins, outs))
             return theano.shared(value=p, borrow=True)
 
         def make_shared_vec(p):
@@ -924,6 +920,8 @@ class ConvolutionalLayer(Model):
         be initialized randomly
     :param b: The bias vector. If not specified the vector will be initialized
         with zeros
+    :param init: The Initializer used to initialize the weights. The default
+        initializer is a XavierInitializer.
 
     Inputs:
         A matrix, where each line is a word vector of size 'insize'
@@ -971,6 +969,11 @@ class ConvolutionalLayer(Model):
             name='b',
             value_type=np.ndarray
         )
+        opts.add(
+            name='init',
+            value_type=init.Initializer,
+            value=init.XavierInitializer()
+        )
 
         return opts
 
@@ -979,15 +982,17 @@ class ConvolutionalLayer(Model):
         insize = opts.get('insize')
         outsize = opts.get('outsize')
         window = opts.get('window')
+        init = opts.get('init')
 
-        W = np.asarray(nnb.rng.uniform(
-            low=-1 / np.sqrt(insize),
-            high=1 / np.sqrt(insize),
-            size=(outsize, insize, window)
-        ), dtype=theano.config.floatX)
+        W = opts.get('W')
+        b = opts.get('b')
+
+        if W is None:
+            W = init((outsize, insize, window))
         W = theano.shared(value=W, name='W', borrow=True)
 
-        b = np.asarray(np.zeros(shape=(outsize,)), dtype=theano.config.floatX)
+        if b is None:
+            b = np.zeros(outsize, dtype=theano.config.floatX)
         b = theano.shared(value=b, name='b', borrow=True)
 
         return [W, b]

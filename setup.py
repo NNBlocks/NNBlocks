@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
     name="NNBlocks",
     version="0.1.a.dev",
-    install_requires = ['theano>=0.7.1', 'matplotlib'],
+    install_requires = ['theano>=0.7.0', 'matplotlib'],
     packages=find_packages(),
     author="Frederico Tommasi Caroli",
     author_email="ftcaroli@gmail.com",
