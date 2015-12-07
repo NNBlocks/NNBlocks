@@ -22,6 +22,13 @@ import numpy as np
 from trainer import Trainer
 
 class SGDTrainer(Trainer):
+    """A Trainer that minimizes a Model using a stochastic gradient descent
+
+    :param learning_rate: Initial learning rate for the method. The learning
+        rate can later be adjusted using the set_learning_rate method.
+    :param momentum: The momentum parameter for the gradient descent. Default is
+        0.
+    """
     def init_options(self):
         opts = nnb.utils.Options()
         opts.add(
@@ -91,4 +98,6 @@ class SGDTrainer(Trainer):
         self.__update_params(len(inputs))
 
     def set_learning_rate(self, learning_rate):
+        """Sets the learning rate
+        """
         self.__lr.set_value(learning_rate)
