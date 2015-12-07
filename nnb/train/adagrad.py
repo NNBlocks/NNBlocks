@@ -22,7 +22,16 @@ from nnb.train import Trainer
 from nnb.utils import Options
 
 class AdagradTrainer(Trainer):
-    reset_history = None
+    """A Trainer to minimize a Model using an adaptative gradient method.
+
+    :param learning_rate: Initial learning rate for the method. The learning
+        rate can later be adjusted using the set_learning_rate method.
+    """
+
+    def reset_history(self):
+        """Resets the adagrad history
+        """
+        self.__reset_hist()
 
     @staticmethod
     def init_options():
@@ -98,7 +107,7 @@ class AdagradTrainer(Trainer):
         adagrad_reset_update = [(hist, T.zeros_like(hist))
                                 for hist in adagrad_hist]
 
-        self.reset_history = theano.function(
+        self.__reset_hist = theano.function(
             inputs=[],
             outputs=None,
             updates=adagrad_reset_update
@@ -121,4 +130,6 @@ class AdagradTrainer(Trainer):
         self.__train_with_grads(len(inputs))
 
     def set_learning_rate(self, learning_rate):
+        """Sets the learning rate
+        """
         self.__lr.set_value(learning_rate)
