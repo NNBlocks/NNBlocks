@@ -18,7 +18,6 @@
 import theano
 import theano.tensor as T
 import nnb.utils as utils
-import abc
 
 class Model(object):
     """The Model class.
@@ -117,7 +116,9 @@ class Model(object):
         will be called several times with different inputs, once for each Model
         placement.
         :param prev: A list of theano variables. These are the Model's inputs
-        :returns: A list of theano variables. These are the Model's outputs
+        :returns: A list of theano variables. These are the Model's outputs. If
+            the Model has some sort of update that it wants to perform, this
+            method can return a tuple (list of outputs, updates dict).
         """
         return prev
 
@@ -156,7 +157,7 @@ class Model(object):
         :returns: Tuple of length 3, which the first element is a list of theano
             variables representing the Model's user inputs, the second element
             is a theano variable or a list of theano variables representing the
-            Model's outputs and the third element is an updates list, used for
+            Model's outputs and the third element is an updates dict, used for
             the theano function.
         """
         inputs = self._get_inputs()
