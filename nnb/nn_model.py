@@ -349,11 +349,16 @@ class RecursiveNeuralNetwork(Model):
                 inputs1.append(partial[children[0]])
                 inputs2.append(partial[children[1]])
             model_out = comp_model.apply(inputs1 + inputs2)
+            updates = theano.updates.OrderedUpdates()
+            if isinstance(model_out, tuple):
+                updates += model_out[1]
+                model_out = model_out[0]
+
             new_partials = []
             for p, o in zip(partials, model_out):
                 new_partials.append(T.set_subtensor(p[index], o))
 
-            return tuple(new_partials)
+            return new_partials, updates
 
         partials = []
         for o in x:
@@ -366,7 +371,7 @@ class RecursiveNeuralNetwork(Model):
             partials.append(partial)
 
         #Execute the scan
-        h, _ = theano.scan(
+        h, updates = theano.scan(
             fn=one_step,
             outputs_info=partials,
             sequences=[
@@ -384,7 +389,7 @@ class RecursiveNeuralNetwork(Model):
         else:
             h = [h[-1]]
 
-        return h
+        return h, updates
 
 class Recurrence(object):
     """An abstract class to Models that implement a recurrence function.
@@ -863,7 +868,7 @@ class RecurrentNeuralNetwork(Model):
         h0 = self.params[:len(self.params) - len(model.params)]
 
         def one_step(*args):
-            return tuple(model.apply(list(args)))
+            return model.apply(list(args))
 
         h, updates = theano.scan(
             fn=one_step,
@@ -874,7 +879,7 @@ class RecurrentNeuralNetwork(Model):
         if not isinstance(h, list):
             h = [h]
 
-        return h
+        return h, updates
 
 class ConvolutionalLayer(Model):
     """A simple convolutional layer for a neural network

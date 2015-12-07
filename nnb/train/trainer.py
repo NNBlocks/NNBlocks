@@ -130,7 +130,7 @@ class Trainer(object):
         L1_reg = options.get('L1_reg')
         L2_reg = options.get('L2_reg')
 
-        inputs, output = self.get_io()
+        inputs, output, updates = self.get_io()
 
         L1_reg = _reg_opt(L1_reg, model)
         L2_reg = _reg_opt(L2_reg, model)

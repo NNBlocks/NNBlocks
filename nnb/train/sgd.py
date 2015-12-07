@@ -52,7 +52,7 @@ class SGDTrainer(Trainer):
         if len(params) == 0:
             raise ValueError("The model has no parameters to train")
 
-        inputs, output = self.get_io()
+        inputs, output, updates = self.get_io()
         cost = self.get_cost()
 
         lr = theano.shared(value=lr)
@@ -72,11 +72,10 @@ class SGDTrainer(Trainer):
 
         grads = [T.grad(cost=cost, wrt=param) for param in params]
 
-        grads_update = []
         for hist, grad in zip(grads_hist, grads):
-            grads_update.append((hist, hist + grad))
+            updates[hist] = hist + grad
 
-        self.__update_grads = theano.function(inputs, [], updates=grads_update)
+        self.__update_grads = theano.function(inputs, [], updates=updates)
 
         batch_size = T.iscalar()
 
