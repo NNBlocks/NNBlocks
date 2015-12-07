@@ -48,6 +48,9 @@ class SGDTrainer(Trainer):
         inputs, output = self.get_io()
         cost = self.get_cost()
 
+        lr = theano.shared(value=lr)
+        self.__lr = lr
+
         velocity = [
             theano.shared(
                 p.get_value() * np.asarray(0., dtype=theano.config.floatX)
@@ -86,3 +89,6 @@ class SGDTrainer(Trainer):
         for inp in inputs:
             self.__update_grads(*inp)
         self.__update_params(len(inputs))
+
+    def set_learning_rate(self, learning_rate):
+        self.__lr.set_value(learning_rate)

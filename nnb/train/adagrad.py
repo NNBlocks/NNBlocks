@@ -81,6 +81,8 @@ class AdagradTrainer(Trainer):
                     for grad, ah in zip(grads_mean, new_hist)]
 
         learning_rate = options.get('learning_rate')
+        learning_rate = theano.shared(value=learning_rate)
+        self.__lr = learning_rate
 
         import collections
         updates = collections.OrderedDict()
@@ -117,3 +119,6 @@ class AdagradTrainer(Trainer):
         for inp in inputs:
             self.__compute_grads(*inp)
         self.__train_with_grads(len(inputs))
+
+    def set_learning_rate(self, learning_rate):
+        self.__lr.set_value(learning_rate)
