@@ -153,25 +153,34 @@ class Model(object):
     def get_io(self):
         """Method that scans the Model for inputs and computes the outputs.
         This method should not be overriden.
-        :returns: Tuple of length 2, which the first element is a list of theano
-            variables representing the Model's user inputs and the second
-            element is a theano variable or a list of theano variables
-            representing the Model's outputs
+        :returns: Tuple of length 3, which the first element is a list of theano
+            variables representing the Model's user inputs, the second element
+            is a theano variable or a list of theano variables representing the
+            Model's outputs and the third element is an updates list, used for
+            the theano function.
         """
         inputs = self._get_inputs()
         outputs = self.apply(None)
+        updates = theano.updates.OrderedUpdates()
+        if isinstance(outputs, tuple):
+            updates = outputs[1]
+            outputs = outputs[0]
         if len(outputs) == 1:
             outputs = outputs[0]
-        return (inputs, outputs)
+        return (inputs, outputs, updates)
 
-    def compile(self):
+    def compile(self, **kwargs):
         """Compiles the Model into a function.
         This method should not be overriden.
+
+        :param **kwargs: Every key=value parameter will be passed along to the
+            `theano.function` compiler.
+
         :returns: A callable object that computes outputs, given inputs, the way
         the Model specifies.
         """
-        a = self.get_io()
-        return theano.function(*a)
+        i, o, u = self.get_io()
+        return theano.function(inputs=i, outputs=o, updates=u, **kwargs)
 
     def __and__(self, other):
         """Concatenates the Model with another vertically.
@@ -404,14 +413,28 @@ class VerticalJoinModel(Model):
         m1 = self.options.get('m1')
         m2 = self.options.get('m2')
         out1 = m1.apply(prev)
+        updates = theano.updates.OrderedUpdates()
+
+        if isinstance(out1, tuple):
+            updates += out1[1]
+            out1 = out1[0]
+
         if not isinstance(out1, list):
             raise ValueError(("The model {0} didn't return a list of theano" +
                                 " variables.").format(type(m1)))
         out2 = m2.apply(prev)
+
+        if isinstance(out2, tuple):
+            updates += out2[1]
+            out2 = out2[0]
+
         if not isinstance(out2, list):
             raise ValueError(("The model {0} didn't return a list of theano" +
                                 " variables.").format(type(m2)))
-        return out1 + out2 #lists
+        if len(updates) == 0:
+            return out1 + out2 #lists
+        else:
+            return out1 + out2, updates
 
 class HorizontalJoinModel(Model):
     """Model that joins two Models horizontally
@@ -480,15 +503,27 @@ class HorizontalJoinModel(Model):
     def apply(self, prev):
         m1 = self.options.get('m1')
         m2 = self.options.get('m2')
+        updates = theano.updates.OrderedUpdates()
         out1 = m1.apply(prev)
+        if isinstance(out1, tuple):
+            updates += out1[1]
+            out1 = out1[0]
+
         if not isinstance(out1, list):
             raise ValueError(("The model {0} didn't return a list of theano" +
                                 " variables.").format(type(m1)))
         out2 = m2.apply(out1)
+        if isinstance(out2, tuple):
+            updates += out2[1]
+            out2 = out2[0]
+
         if not isinstance(out2, list):
             raise ValueError(("The model {0} didn't return a list of theano" +
                                 " variables.").format(type(m2)))
-        return out2
+        if len(updates) == 0:
+            return out2
+        else:
+            return out2, updates
 
 class Picker(Model):
     """Model that uses its input to slice a set of choices
