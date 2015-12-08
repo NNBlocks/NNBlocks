@@ -1053,6 +1053,25 @@ class MaxPoolingLayer(Model):
         return [out]
 
 class DropoutLayer(PerceptronLayer):
+    """Dropout layer
+    This Model functions exactly like the Perceptron layer. All the differences
+    are listed here. For the whole functionality, read the nnb.PerceptronLayer
+    documentation.
+    This Model drops the output from a neuron with probability `p`. Dropping a
+    neuron is equivalent to setting an output to 0.
+    To evaluate a Model using this layer, create another Model that substitutes
+    this layer with a PerceptronLayer and do the following:
+
+    perceptron_layer.params = [param / 2 for param in dropout_layer.params]
+
+    Now the Model containing this perceptron_layer SHOULD NOT be trained. The
+    attempt to do so will result in a difficult to understand theano error.
+    Maybe in the future the action to create an evaluation Model from one that
+    contains a DropoutLayer will be automatic.
+
+    :param p: The probability of dropping a neuron. This should be a float. The
+        default value is 0.5
+    """
 
     @staticmethod
     def init_options():
