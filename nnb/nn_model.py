@@ -1012,6 +1012,9 @@ class MaxPoolingLayer(Model):
     :param ignore_border: If set to True, the last vectors when sliding the
         window will be ignored if they don't fit in a full `window` size. The
         default value for this parameter is False.
+        NOTE: If you know the number of line of the input matrix will be a
+        multiple of `window`, set this parameter to True. This can result in
+        some performance boost.
 
     Inputs:
         A matrix
@@ -1039,18 +1042,18 @@ class MaxPoolingLayer(Model):
         window = self.options.get('window')
         ignore_border = self.options.get('ignore_border')
 
-        def one_step(ind, inp):
-            x = inp[ind * window:(ind + 1) * window]
-            return T.max(x, axis=0)
+        x = prev[0]
 
-        steps = prev[0].shape[0] / window
-        if not ignore_border:
-            cond = T.lt(steps * window, prev[0].shape[0])
-            steps = T.switch(cond, steps + 1, steps)
+        rest = x.shape[0] % window
 
-        out, updates = theano.scan(fn=one_step, non_sequences=[prev[0]],
-                                sequences=[T.arange(steps)])
-        return [out]
+        if ignore_border:
+            x = x[:-rest]
+        else:
+            pad = T.alloc(float('-inf'), window - rest, x.shape[1])
+            x = T.concatenate([x, pad], axis=0)
+
+        x = x.reshape((x.shape[0] // window, window, x.shape[1]))
+        return [T.max(x, axis=1)]
 
 class DropoutLayer(PerceptronLayer):
     """Dropout layer
