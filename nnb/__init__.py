@@ -39,5 +39,6 @@ from nn_model import (
     SimpleRecurrence,
     LSTMRecurrence,
     ConvolutionalLayer,
-    MaxPoolingLayer
+    MaxPoolingLayer,
+    DropoutLayer
 )

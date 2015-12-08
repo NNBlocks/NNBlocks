@@ -1051,3 +1051,25 @@ class MaxPoolingLayer(Model):
         out, updates = theano.scan(fn=one_step, non_sequences=[prev[0]],
                                 sequences=[T.arange(steps)])
         return [out]
+
+class DropoutLayer(PerceptronLayer):
+
+    @staticmethod
+    def init_options():
+        opts = PerceptronLayer.init_options()
+        opts.add(
+            name='p',
+            value_type=float,
+            value=0.5
+        )
+        return opts
+
+    def apply(self, prev):
+        #Based on https://github.com/mdenil/dropout/blob/master/mlp.py
+        o = super(DropoutLayer, self).apply(prev)
+        p = self.options.get('p')
+        srng = theano.tensor.shared_randomstreams.RandomStreams(
+            nnb.rng.randint(999999))
+        mask = srng.binomial(n=1, p=(1 - p), size=o[0].shape)
+
+        return [o[0] * T.cast(mask, theano.config.floatX)]
