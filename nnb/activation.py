@@ -38,12 +38,9 @@ def threshold(t, yes=1., no=0.):
 def ReLU(a):
     return 0.5 * (a + abs(a))
 
-def leaky_ReLU(alpha, x=None):
+def leaky_ReLU(alpha):
     def r(a):
         f1 = 0.5 * (a + alpha)
         f2 = 0.5 * (a - alpha)
         return f1 * a + f2 * abs(a)
-    if x is not None:
-        return r(x)
-    else:
-        return r
+    return r
