@@ -18,6 +18,7 @@
 import theano.tensor as T
 import theano
 import numpy as np
+import nnb
 from nnb.train import Trainer
 from nnb.utils import Options
 
@@ -45,29 +46,35 @@ class AdagradTrainer(Trainer):
             value=0.1,
             value_type=float
         )
+        ops.add(
+            name="batch_size",
+            value=20,
+            value_type=int
+        )
+        ops.add(
+            name="dataset",
+            value_type=nnb.data.Dataset,
+            required=True
+        )
         return ops
 
     def setup(self):
         options = self.options
         model = options.get('model')
+        batch_size = options.get('batch_size')
+        dataset = options.get('dataset')
 
         params = model.params
         if params is None or len(params) == 0:
             raise ValueError("The model has no parameters to train")
 
         inputs, output, updates = self.get_io()
+        index = T.lscalar("batch_index")
         cost = self.get_cost()
 
         batch_size = T.iscalar()
 
         params_grads = [T.grad(cost=cost, wrt=param) for param in params]
-        grads_hist = [
-            theano.shared(
-                p.get_value() * np.asarray(0., dtype=theano.config.floatX)
-            ) for p in params
-        ]
-
-        grads_mean = [g / batch_size for g in grads_hist]
 
         adagrad_hist = options.get('hist')
         if adagrad_hist is None:
@@ -84,33 +91,29 @@ class AdagradTrainer(Trainer):
         ]
 
         new_hist = [ah + T.sqr(param_g)
-                        for ah, param_g in zip(adagrad_hist, grads_mean)]
+                        for ah, param_g in zip(adagrad_hist, params_grads)]
 
         new_grad = [grad / (1e-6 + T.sqrt(ah))
-                    for grad, ah in zip(grads_mean, new_hist)]
+                    for grad, ah in zip(params_grads, new_hist)]
 
         learning_rate = options.get('learning_rate')
         learning_rate = theano.shared(value=learning_rate)
         self.__lr = learning_rate
 
-        for g, pg in zip(grads_hist, params_grads):
-            updates[g] = g + pg
-
-        self.__compute_grads = theano.function(inputs, updates=updates)
-
-        import collections
-        updates = collections.OrderedDict()
         for param, ng in zip(params, new_grad):
             updates[param] = param - learning_rate * ng
 
         for hist, nh in zip(adagrad_hist, new_hist):
             updates[hist] = nh
 
-        for g in grads_hist:
-            updates[g] = T.zeros_like(g)
+        givens = dataset.to_givens(inputs, index, batch_size)
 
-        self.__train_with_grads = theano.function([batch_size], [],
-                                                    updates=updates)
+        self.__train = theano.function(
+            inputs=[index],
+            outputs=None,
+            updates=updates,
+            givens=givens
+        )
 
         adagrad_reset_update = [(hist, T.zeros_like(hist))
                                 for hist in adagrad_hist]
@@ -121,12 +124,8 @@ class AdagradTrainer(Trainer):
             updates=adagrad_reset_update
         )
 
-    def train(self, inputs):
-        options = self.options
-
-        for inp in inputs:
-            self.__compute_grads(*inp)
-        self.__train_with_grads(len(inputs))
+    def train(self, index):
+        self.__train(index)
 
     def set_learning_rate(self, learning_rate):
         """Sets the learning rate

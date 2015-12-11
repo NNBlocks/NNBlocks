@@ -29,18 +29,13 @@ class TrainSupervisor(object):
         opts = utils.Options()
 
         opts.add(
-            name='dataset',
-            required=True,
-            value_type=[np.ndarray, list]
-        )
-        opts.add(
             name='trainer',
             required=True,
             value_type=nnb.train.Trainer
         )
         opts.add(
             name='eval_dataset',
-            value_type=[np.ndarray, list]
+            value_type=nnb.data.Dataset
         )
         opts.add(
             name='eval_interval',
@@ -66,10 +61,6 @@ class TrainSupervisor(object):
             value_type=list
         )
         opts.add(
-            name='batch_size',
-            value_type=int
-        )
-        opts.add(
             name='eval_model'
         )
         opts.add(
@@ -89,19 +80,7 @@ class TrainSupervisor(object):
         self.options.check()
         trainer = self.options.get('trainer')
         eval_model = self.options.get('eval_model')
-
-        if eval_model is None:
-            eval_model = trainer.options.get('model')
-            self.options.set('eval_model_is_cost', True)
-
-        io = eval_model.get_io()
-        inp = io[0]
-        outp = io[1]
-
-        self.__eval = theano.function(inp, outp)
-
         eval_dataset = self.options.get('eval_dataset')
-        dataset = self.options.get('dataset')
 
         #This avoids some problems with the shuffle and custom procedures.
         #For example, the user might want to do some evaluation himself with a
@@ -111,6 +90,18 @@ class TrainSupervisor(object):
             import copy
             eval_dataset = copy.deepcopy(dataset)
             self.options.set('eval_dataset', eval_dataset)
+
+        if eval_model is None:
+            eval_model = trainer.options.get('model')
+            self.options.set('eval_model_is_cost', True)
+
+        io = eval_model.get_io()
+        inp = io[0]
+        outp = io[1]
+
+        givens = eval_dataset.to_givens(inp)
+
+        self.__eval = theano.function([], outp, givens=givens)
 
         plot_cost = self.options.get('plot')
         eval_model_is_cost = self.options.get('eval_model_is_cost')
@@ -134,16 +125,10 @@ class TrainSupervisor(object):
             self.options.get('custom_procedures').append(plot_func)
 
     def eval(self, dataset):
-        all_out = []
-        for ex in dataset:
-            cost = self.__eval(*ex)
-            all_out.append(cost)
-
-        return all_out
+        return self.__eval()
 
     def train(self):
         opts = self.options
-        dataset = opts.get('dataset')
         eval_dataset = opts.get('eval_dataset')
         eval_interval = opts.get('eval_interval')
         trainer = opts.get('trainer')
@@ -152,13 +137,11 @@ class TrainSupervisor(object):
         epochs_num = opts.get('epochs_num')
         permute = opts.get('permute_train')
         custom_procedures = opts.get('custom_procedures')
-        batch_size = opts.get('batch_size')
         eval_model_is_cost = opts.get('eval_model_is_cost')
+        dataset = trainer.options.get('dataset')
+        batch_size = trainer.options.get('batch_size')
 
         descriptor = TrainingDescriptor()
-
-        if batch_size is None:
-            batch_size = len(dataset)
 
         no_improve = 0
         descriptor.best_eval_error = float('Inf')
@@ -168,12 +151,10 @@ class TrainSupervisor(object):
             print '~Epoch {0}~'.format(epoch + 1)
             init_time = time.time()
             if permute:
-                nnb.rng.shuffle(dataset)
+                dataset.shuffle()
             iterations = len(dataset) / batch_size
-            for i in xrange(iterations):
-                si = i * batch_size
-                ei = (i + 1) * batch_size
-                trainer.train(dataset[si:ei])
+            for i in range(iterations):
+                trainer.train(i)
                 fracs = iterations / 10
                 if fracs > 0 and i % fracs == 0:
                     frac = i / fracs

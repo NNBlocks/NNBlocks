@@ -18,6 +18,7 @@
 import numpy as np
 rng = np.random.RandomState(1337)
 
+import data
 import init
 import utils
 from model import (
