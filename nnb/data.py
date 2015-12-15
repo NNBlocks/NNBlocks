@@ -17,6 +17,7 @@
 
 import numpy as np
 import theano
+import nnb
 
 class Input(object):
     """Represents a collection user inputs for a Model
@@ -56,7 +57,6 @@ class Input(object):
                 ndarray_pad = np.zeros(shape=(pad,) + inp.shape[1:],
                                         dtype=inp.dtype)
                 data[i] = np.concatenate([inp, ndarray_pad], axis=0)
-            print data[i]
 
         data = np.asarray(data)
         self.data = theano.shared(value=data, borrow=True)
@@ -119,15 +119,13 @@ class Dataset(object):
         return list(self._inputs.values())
 
     def to_givens(self, inputs, index=0, batch_size=None):
-        if batch_size:
+        if batch_size is None:
             batch_size = len(self)
         givens = {}
         si = index * batch_size
         ei = si + batch_size
         if self.all_inputs_are_named():
             for inp in inputs:
-                print inp
-                print self.get_input(inp.name).data
                 givens[inp] = self.get_input(inp.name).data[si:ei]
         else:
             givens = {i: d.data[si:ei] for i, d in
@@ -136,9 +134,9 @@ class Dataset(object):
         return givens
 
     def shuffle(self):
-        order = nnb.rng.shuffle(np.arange(len(self)))
+        order = nnb.rng.permutation(np.arange(len(self)))
         for inp in self.get_inputs():
-            inp.data = inp.data[order]
+            inp.data.set_value(inp.data.get_value()[order])
 
     def __len__(self):
         return len(self._inputs.values()[0])

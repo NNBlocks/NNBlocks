@@ -48,7 +48,6 @@ class AdagradTrainer(Trainer):
         )
         ops.add(
             name="batch_size",
-            value=20,
             value_type=int
         )
         ops.add(
@@ -64,15 +63,20 @@ class AdagradTrainer(Trainer):
         batch_size = options.get('batch_size')
         dataset = options.get('dataset')
 
+        if batch_size is None:
+            batch_size = len(dataset)
+            options.set('batch_size', batch_size)
+
         params = model.params
         if params is None or len(params) == 0:
             raise ValueError("The model has no parameters to train")
 
         inputs, output, updates = self.get_io()
+
+        if isinstance(output, list):
+            raise ValueError("The model has more than one output")
         index = T.lscalar("batch_index")
         cost = self.get_cost()
-
-        batch_size = T.iscalar()
 
         params_grads = [T.grad(cost=cost, wrt=param) for param in params]
 
@@ -91,7 +95,7 @@ class AdagradTrainer(Trainer):
         ]
 
         new_hist = [ah + T.sqr(param_g)
-                        for ah, param_g in zip(adagrad_hist, params_grads)]
+                    for ah, param_g in zip(adagrad_hist, params_grads)]
 
         new_grad = [grad / (1e-6 + T.sqrt(ah))
                     for grad, ah in zip(params_grads, new_hist)]
@@ -110,7 +114,7 @@ class AdagradTrainer(Trainer):
 
         self.__train = theano.function(
             inputs=[index],
-            outputs=None,
+            outputs=output,
             updates=updates,
             givens=givens
         )

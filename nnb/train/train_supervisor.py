@@ -81,6 +81,7 @@ class TrainSupervisor(object):
         trainer = self.options.get('trainer')
         eval_model = self.options.get('eval_model')
         eval_dataset = self.options.get('eval_dataset')
+        dataset = trainer.options.get('dataset')
 
         #This avoids some problems with the shuffle and custom procedures.
         #For example, the user might want to do some evaluation himself with a
@@ -118,8 +119,11 @@ class TrainSupervisor(object):
             import nnb.utils.plot_procedure as plot
 
             def get_cost(last_eval_results):
-                accum_cost = sum(last_eval_results)
-                return accum_cost / len(last_eval_results)
+                if last_eval_results.ndim > 1:
+                    accum_cost = sum(last_eval_results)
+                    return accum_cost / len(last_eval_results)
+                else:
+                    return last_eval_results
 
             plot_func = plot.plot_line(fn=get_cost, title="Cost")
             self.options.get('custom_procedures').append(plot_func)
@@ -168,10 +172,14 @@ class TrainSupervisor(object):
                 print 'Evaluating...'.format(epoch + 1)
                 descriptor.last_eval_results = self.eval(eval_dataset)
                 if eval_model_is_cost:
-                    descriptor.last_eval_error = \
-                        sum(descriptor.last_eval_results)
-                    descriptor.last_eval_error /= \
-                        len(descriptor.last_eval_results)
+                    if descriptor.last_eval_results.ndim > 1:
+                        descriptor.last_eval_error = \
+                            sum(descriptor.last_eval_results)
+                        descriptor.last_eval_error /= \
+                            len(descriptor.last_eval_results)
+                    else:
+                        descriptor.last_eval_error = \
+                            descriptor.last_eval_results
                     print 'Error = {0}'.format(descriptor.last_eval_error)
                     if descriptor.last_eval_error < descriptor.best_eval_error:
                         print 'New best!'

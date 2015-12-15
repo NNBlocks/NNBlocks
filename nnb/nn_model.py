@@ -220,8 +220,19 @@ class SoftmaxLayer(Model):
         inps = prev[0]
         W_softmax = self.params[0]
         b_softmax = self.params[1]
+        outsize = self.options.get('outsize')
 
-        return [T.nnet.softmax(T.dot(inps, W_softmax) + b_softmax)]
+        shape = None
+        if inps.ndim == 3:
+            shape = inps.shape
+            inps = inps.reshape((shape[0] * shape[1], shape[2]))
+
+        ret = T.nnet.softmax(T.dot(inps, W_softmax) + b_softmax)
+
+        if shape is not None:
+            ret = ret.reshape((shape[0], shape[1], outsize))
+
+        return [ret]
 
 
 class RecursiveNeuralNetwork(Model):
@@ -867,12 +878,15 @@ class RecurrentNeuralNetwork(Model):
         model = options.get('model')
         h0 = self.params[:len(self.params) - len(model.params)]
 
+        h0 = [T.tile(inp0, (inputs[0].shape[0],) + (1,)*inp0.ndim)
+                for inp0 in h0]
+
         def one_step(*args):
             return model.apply(list(args))
 
         h, updates = theano.scan(
             fn=one_step,
-            sequences=inputs,
+            sequences=[inp.swapaxes(0,1) for inp in inputs],
             outputs_info=h0
         )
 

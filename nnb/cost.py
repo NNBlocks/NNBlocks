@@ -42,10 +42,9 @@ def cross_entropy_error(p, y):
     elif p.ndim <= 2:
         return -T.mean((y * T.log(p)).T.sum(axis=0))
     elif p.ndim == 3:
-        def one_step(i, o):
-            return (o * T.log(i)).T.sum(axis=0)
-        errors, _ = theano.scan(fn=one_step, sequences=[p, y])
-        return -T.mean(errors)
+        p = p.reshape((p.shape[0] * p.shape[1], p.shape[2]))
+        y = y.reshape((y.shape[0] * y.shape[1], p.shape[2]))
+        return -T.mean((y * T.log(p)).sum(axis=1))
     else:
         raise NotImplemented("cross_entropy can only be performed on ndim up " +
                             "to 3")
@@ -77,9 +76,13 @@ def negative_log_likelihood_error(p, y):
         return -T.log(p[y])
     elif p.ndim == 2 and y.ndim == 1:
         return -T.mean(T.log(p)[T.arange(y.shape[0]), y])
+    elif p.ndim == 3 and y.ndim == 2:
+        p = p.reshape((p.shape[0] * p.shape[1], p.shape[2]))
+        y = y.reshape((y.shape[0] * y.shape[1],))
+        return -T.mean(T.log(p)[T.arange(y.shape[0]), y])
     else:
         error_str = "Invalid dimensions for negative log likelihood: {0} and" +\
-                    "{1}."
+                    " {1}."
         error_str = error_str.format(p.ndim, y.ndim)
         raise ValueError(error_str)
 
