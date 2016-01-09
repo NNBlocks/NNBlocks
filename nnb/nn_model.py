@@ -840,21 +840,20 @@ class RecurrentNeuralNetwork(Model):
                 if not isinstance(h0, list):
                     h0 = [h0]
 
-                return h0 + model.params
             else:
-                if not isinstance(h0, list):
-                    h0 = [theano.shared(value=h0, name='h0', borrow=True)]
-
-                h0_n = []
-                for i in range(len(h0)):
-                    h0_n.append(
-                        theano.shared(
-                            name='h0_{0}'.format(i),
-                            value=h0[i],
-                            borrow=True
+                if isinstance(h0, list):
+                    h0_n = []
+                    for i in range(len(h0)):
+                        h0_n.append(
+                            theano.shared(
+                                name='h0_{0}'.format(i),
+                                value=h0[i],
+                                borrow=True
+                            )
                         )
-                    )
-                h0 = h0_n
+                    h0 = h0_n
+                else:
+                    h0 = [theano.shared(value=h0, name='h0', borrow=True)]
 
 
         return h0 + model.params
