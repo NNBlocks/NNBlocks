@@ -479,8 +479,8 @@ class SimpleRecurrence(Model, Recurrence):
         return ops
 
     def get_h0(self):
-        insize = self.options.get('insize')
-        h0 = np.asarray(np.zeros(shape=(insize,)), dtype=theano.config.floatX)
+        outsize = self.options.get('outsize')
+        h0 = np.asarray(np.zeros(shape=(outsize,)), dtype=theano.config.floatX)
         h0 = theano.shared(value=h0, name='h0')
         return h0
 
