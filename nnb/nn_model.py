@@ -781,14 +781,15 @@ class RecurrentNeuralNetwork(Model):
 
     Inputs:
         Any number of inputs with any number of dimensions > 0, as long as the
-            length of the first dimension of all inputs are equal. This is
-            required because the first dimension of all inputs are understanded
-            as the passing of time.
+            length of the first and second dimensions of all inputs are equal.
+            This is required because the first dimension of all inputs is the
+            batch and the second dimension of all inputs are understanded as
+            the passing of time.
 
     Outputs:
         The same outputs as the Recurrence Model with an extra dimension. This
-            extra dimension puts all outputs from the Recurrence Model in the
-            same tensor
+            extra dimension puts all outputs from the same batch example in the
+            same subtensor.
 
     Tunable Parameters:
         h0 - The first values used for the recurrence, in the same order they
@@ -892,6 +893,7 @@ class RecurrentNeuralNetwork(Model):
 
         if not isinstance(h, list):
             h = [h]
+        h = [inp.swapaxes(0,1) for inp in h]
 
         return h, updates
 
