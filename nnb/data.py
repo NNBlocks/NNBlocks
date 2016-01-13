@@ -30,8 +30,8 @@ class Input(object):
         :param name: Name of the user input. This can be useful to identify this
             input later in the training
         """
-        if not isinstance(data, list) or (isinstance(data, np.ndarray)
-                                            and data.dtype != 'object'):
+        if (not isinstance(data, list) and not isinstance(data, np.ndarray)) \
+                or (isinstance(data, np.ndarray) and data.dtype != 'object'):
             raise ValueError("The data parameter should either be a list or " +
                             "a numpy ndarray with dtype=object")
 
@@ -136,7 +136,8 @@ class Dataset(object):
     def shuffle(self):
         order = nnb.rng.permutation(np.arange(len(self)))
         for inp in self.get_inputs():
-            inp.data.set_value(inp.data.get_value()[order])
+            inp.data.set_value(inp.data.get_value(borrow=True)[order],
+                                borrow=True)
 
     def __len__(self):
         return len(self._inputs.values()[0])
