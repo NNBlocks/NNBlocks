@@ -112,8 +112,6 @@ class WordVecsHelper:
                 line_counts += 1
 
 
-        nnb.rng = np.random.RandomState(16927361)
-
         #UNK
         line_counts += 1
         word_vecs = np.empty(
