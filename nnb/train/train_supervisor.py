@@ -53,7 +53,8 @@ class TrainSupervisor(object):
         )
         opts.add(
             name='epochs_num',
-            value_type=int
+            value_type=int,
+            required=True
         )
         opts.add(
             name='permute_train',
@@ -218,6 +219,8 @@ class TrainSupervisor(object):
             print 'Best error: {0}'.format(descriptor.best_eval_error)
             for p, new_p in zip(model.params, best_params):
                 p.set_value(new_p)
+
+        return descriptor.best_eval_error
 
 
 class StopTraining(Exception):
