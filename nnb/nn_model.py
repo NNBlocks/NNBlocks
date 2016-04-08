@@ -221,7 +221,11 @@ class SoftmaxLayer(Model):
         W_softmax = self.params[0]
         b_softmax = self.params[1]
 
-        return [T.nnet.softmax(T.dot(inps, W_softmax) + b_softmax)]
+        y = T.nnet.softmax(T.dot(inps, W_softmax) + b_softmax)
+        if inps.ndim == 1:
+            y = y.reshape((y.shape[1],))
+
+        return [y]
 
 
 class RecursiveNeuralNetwork(Model):
