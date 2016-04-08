@@ -67,7 +67,8 @@ class AdagradTrainer(Trainer):
             ) for p in params
         ]
 
-        grads_mean = [g / batch_size for g in grads_hist]
+        grads_mean = [T.cast(g / batch_size, theano.config.floatX)
+                        for g in grads_hist]
 
         adagrad_hist = options.get('hist')
         if adagrad_hist is None:
@@ -90,6 +91,7 @@ class AdagradTrainer(Trainer):
                     for grad, ah in zip(grads_mean, new_hist)]
 
         learning_rate = options.get('learning_rate')
+        learning_rate = np.cast[theano.config.floatX](learning_rate)
         learning_rate = theano.shared(value=learning_rate)
         self.__lr = learning_rate
 
